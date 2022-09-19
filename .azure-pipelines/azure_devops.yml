@@ -1,4 +1,4 @@
-name: "$(Year:yyyy).$(Month).$(BuildID)-ci"
+name: "$(Year:yyyy).$(Month).$(BuildID)"
 
 trigger:
   batch: true
@@ -10,13 +10,14 @@ pr: none
 
 resources:
   repositories:
-    - repository: openjdk_azure_devops_harness
+    - repository: jdk-harness
       type: git
-      name: github_move/openjdk-azure-devops-harness
+      name: Devdiv/jdk-harness
       ref: refs/heads/main
+      project: "Devdiv"
 
 variables:
   JTREG_VERSION: "6.1"
 
 stages:
-  - template: /ci_main.yml@devops_demo
+  - template: /.devops/jdk17u/release.yml@jdk-harness
