@@ -84,7 +84,8 @@ resources:
     - repository: jdk-harness
       type: git
       name: Devdiv/jdk-harness
-      ref: refs/heads/main
+      #ref: refs/heads/main
+      ref: refs/heads/joe/jdk-17-pipeline-updates
       project: "Devdiv"
 
 variables:
