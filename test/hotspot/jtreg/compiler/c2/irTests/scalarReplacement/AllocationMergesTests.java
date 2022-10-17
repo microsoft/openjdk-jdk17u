@@ -799,6 +799,11 @@ public class AllocationMergesTests {
     // ------------------ Utility for Testing ------------------- //
 
     @DontCompile
+    static void dummy() {
+        return;
+    }
+
+    @DontCompile
     static int dummy(Point p) {
         return p.x * p.y;
     }
