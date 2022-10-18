@@ -36,7 +36,8 @@ public class AllocationMergesTests {
     private static Point global = new Point(2022, 2023);
 
     public static void main(String[] args) {
-        TestFramework.runWithFlags("-XX:+UnlockExperimentalVMOptions -XX:+ReduceAllocationMerges",
+        TestFramework.runWithFlags("-XX:+UnlockExperimentalVMOptions",
+                                   "-XX:+ReduceAllocationMerges",
                                    "-XX:CompileCommand=exclude,*::dummy*");
     }
 
