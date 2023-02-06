@@ -477,6 +477,9 @@
   develop(bool, TraceReduceAllocationMerges, false,                         \
           "Trace decision for simplifying allocation merges.")              \
                                                                             \
+  develop(bool, PrintScalarReplacementCount, false,                         \
+          "Trace decision for simplifying allocation merges.")              \
+                                                                            \
   product(bool, DoEscapeAnalysis, true,                                     \
           "Perform escape analysis")                                        \
                                                                             \

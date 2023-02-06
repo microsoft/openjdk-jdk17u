@@ -43,6 +43,19 @@ ciSymbol::ciSymbol(Symbol* s, vmSymbolID sid)
 
 DEBUG_ONLY(bool ciSymbol::sid_ok() { return vmSymbols::find_sid(get_symbol()) == _sid; })
 
+uint ciSymbol::hash() {
+   const char* str = get_symbol()->as_utf8();
+   uint hash = 0;
+   uint idx = 0;
+
+   while (str[idx] != '\0') {
+         hash = str[idx] + 31*hash;
+         idx++;
+     }
+
+   return hash;
+}
+
 // ciSymbol
 //
 // This class represents a Symbol* in the HotSpot virtual

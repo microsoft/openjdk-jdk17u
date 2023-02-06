@@ -1057,6 +1057,7 @@ public:
   // won't go into the table and we'll lose a little optimization.
   static const uint NO_HASH = 0;
   virtual uint hash() const;
+  virtual uint hash2() const;
   virtual bool cmp( const Node &n ) const;
 
   // Operation appears to be iteratively computed (such as an induction variable)

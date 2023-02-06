@@ -39,6 +39,8 @@ private:
   PhaseIterGVN &_igvn;
 
 public:
+    // Total number of scalar replacements
+   int _number_of_allocates_removed;
   // Helper methods roughly modeled after GraphKit:
   Node* basic_plus_adr(Node* base, int offset) {
     return (offset == 0)? base: basic_plus_adr(base, MakeConX(offset));
@@ -215,7 +217,7 @@ private:
   Node* make_arraycopy_load(ArrayCopyNode* ac, intptr_t offset, Node* ctl, Node* mem, BasicType ft, const Type *ftype, AllocateNode *alloc);
 
 public:
-  PhaseMacroExpand(PhaseIterGVN &igvn) : Phase(Macro_Expand), _igvn(igvn), _has_locks(false) {
+  PhaseMacroExpand(PhaseIterGVN &igvn) : Phase(Macro_Expand), _igvn(igvn), _number_of_allocates_removed(0), _has_locks(false) {
     _igvn.set_delay_transform(true);
   }
   void eliminate_macro_nodes();

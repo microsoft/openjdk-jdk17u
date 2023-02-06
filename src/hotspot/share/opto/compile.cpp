@@ -2049,6 +2049,25 @@ void Compile::remove_root_to_sfpts_edges(PhaseIterGVN& igvn) {
   }
 }
 
+uint ir_graph_hash(Node* root, uint seed1, uint seed2) {
+  uint hash = 0;
+  Unique_Node_List ideal_nodes;
+  ideal_nodes.push(root);
+
+  for( uint next = 0; next < ideal_nodes.size(); ++next ) {
+    Node* n = ideal_nodes.at(next);
+
+    hash = (hash | n->hash2() | n->_idx) % 74207281;
+
+    for (DUIterator_Fast imax, i = n->fast_outs(imax); i < imax; i++) {
+        Node* m = n->fast_out(i);   // Get user
+        ideal_nodes.push(m);
+    }
+  }
+
+  return seed1 + seed2 + hash;
+}
+
 //------------------------------Optimize---------------------------------------
 // Given a graph, optimize it.
 void Compile::Optimize() {
@@ -2159,6 +2178,9 @@ void Compile::Optimize() {
       if (failing())  return;
     }
 
+    uint hash = ir_graph_hash(root(), method()->holder()->name()->hash(), method()->name()->hash());
+    uint scaled = 0;
+
     bool progress;
     do {
       ConnectionGraph::do_analysis(this, &igvn);
@@ -2178,7 +2200,7 @@ void Compile::Optimize() {
         PhaseMacroExpand mexp(igvn);
         mexp.eliminate_macro_nodes();
         if (failing())  return;
-
+        scaled = mexp._number_of_allocates_removed;
         igvn.set_delay_transform(false);
         igvn.optimize();
         print_method(PHASE_ITER_GVN_AFTER_ELIMINATION, 2);
@@ -2191,6 +2213,11 @@ void Compile::Optimize() {
       // Try again if candidates exist and made progress
       // by removing some allocations and/or locks.
     } while (progress);
+
+    if (PrintScalarReplacementCount) {
+      ttyLocker ttyl;
+      tty->print_cr("**JEGSRCOUNT** %X %s::%s %u", hash, _method->holder()->name()->as_utf8(), _method->name()->as_utf8(), scaled);
+     }
   }
 
   // Loop transforms on the ideal graph.  Range Check Elimination,
