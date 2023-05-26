@@ -825,8 +825,7 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
       assert(cik->is_instance_klass() ||
             cik->is_array_klass(), "Not supported allocation.");
       sv = new ObjectValue(spobj->_idx,
-                           new ConstantOopWriteValue(cik->java_mirror()->constant_encoding()),
-                           spobj->is_only_merge_sr_candidate());
+                           new ConstantOopWriteValue(cik->java_mirror()->constant_encoding()));
       set_sv_for_object_node(objs, sv);
 
       uint first_ind = spobj->first_index(sfpt->jvms());
@@ -840,28 +839,28 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
     return;
   } else if (local->is_SafePointScalarMerge()) {
     SafePointScalarMergeNode* smerge = local->as_SafePointScalarMerge();
-    ObjectMergeValue* sv = (ObjectMergeValue*) sv_for_node_id(objs, smerge->_idx);
+    ObjectMergeValue* mv = (ObjectMergeValue*) sv_for_node_id(objs, smerge->_idx);
 
-    if (sv == NULL) {
+    if (mv == NULL) {
       GrowableArray<ScopeValue*> deps;
 
       int merge_pointer_idx = smerge->merge_pointer_idx(sfpt->jvms());
-      (void)FillLocArray(0, NULL, sfpt->in(merge_pointer_idx), &deps, NULL);
+      (void)FillLocArray(0, sfpt, sfpt->in(merge_pointer_idx), &deps, objs);
       assert(deps.length() == 1, "missing value");
 
       int selector_idx = smerge->selector_idx(sfpt->jvms());
       (void)FillLocArray(1, NULL, sfpt->in(selector_idx), &deps, NULL);
       assert(deps.length() == 2, "missing value");
 
-      sv = new ObjectMergeValue(smerge->_idx, deps.at(0), deps.at(1));
-      set_sv_for_object_node(objs, sv);
+      mv = new ObjectMergeValue(smerge->_idx, deps.at(0), deps.at(1));
+      set_sv_for_object_node(objs, mv);
 
       for (uint i = 1; i < smerge->req(); i++) {
-        Node* fld_node = smerge->in(i);
-        (void)FillLocArray(sv->possible_objects()->length(), sfpt, fld_node, sv->possible_objects(), objs);
+        Node* obj_node = smerge->in(i);
+        (void)FillLocArray(mv->possible_objects()->length(), sfpt, obj_node, mv->possible_objects(), objs);
       }
     }
-    array->append(sv);
+    array->append(mv);
     return;
   }
 
@@ -1125,8 +1124,8 @@ void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
           assert(cik->is_instance_klass() ||
                  cik->is_array_klass(), "Not supported allocation.");
           ScopeValue* klass_sv = new ConstantOopWriteValue(cik->java_mirror()->constant_encoding());
-          ObjectValue* sv = spobj->is_auto_box() ? new AutoBoxObjectValue(spobj->_idx, klass_sv, spobj->is_only_merge_sr_candidate())
-                                        : new ObjectValue(spobj->_idx, klass_sv, spobj->is_only_merge_sr_candidate());
+          ObjectValue* sv = spobj->is_auto_box() ? new AutoBoxObjectValue(spobj->_idx, klass_sv)
+                                        : new ObjectValue(spobj->_idx, klass_sv);
           PhaseOutput::set_sv_for_object_node(objs, sv);
 
           uint first_ind = spobj->first_index(youngest_jvms);
@@ -1152,6 +1151,32 @@ void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
       Location basic_lock = Location::new_stk_loc(Location::normal,C->regalloc()->reg2offset(box_reg));
       bool eliminated = (box_node->is_BoxLock() && box_node->as_BoxLock()->is_eliminated());
       monarray->append(new MonitorValue(scval, basic_lock, eliminated));
+    }
+
+    // Mark ObjectValue nodes as root nodes if they are directly
+    // referenced in the JVMS.
+    for (int i = 0; i < objs->length(); i++) {
+      ScopeValue* sv = objs->at(i);
+      if (sv->is_object_merge()) {
+        ObjectMergeValue* merge = sv->as_ObjectMergeValue();
+
+        for (int j = 0; j< merge->possible_objects()->length(); j++) {
+          ObjectValue* ov = merge->possible_objects()->at(j)->as_ObjectValue();
+          bool is_root = locarray->contains(ov) || exparray->contains(ov);
+
+          if (!is_root) {
+            for (int k = 0; k < monarray->length(); k++) {
+              MonitorValue* mv = monarray->at(k);
+              if (mv->owner() == ov) {
+                is_root = true;
+                break;
+              }
+            }
+          }
+
+          ov->set_root(is_root);
+        }
+      }
     }
 
     // We dump the object pool first, since deoptimization reads it in first.
