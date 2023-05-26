@@ -62,13 +62,13 @@ ConnectionGraph::ConnectionGraph(Compile * C, PhaseIterGVN *igvn, int invocation
   // Add unknown java object.
   add_java_object(C->top(), PointsToNode::GlobalEscape);
   phantom_obj = ptnode_adr(C->top()->_idx)->as_JavaObject();
-  set_not_scalar_replaceable(phantom_obj NOT_PRODUCT(COMMA "Phantom object"));
+  phantom_obj->set_scalar_replaceable(false);
   // Add ConP and ConN null oop nodes
   Node* oop_null = igvn->zerocon(T_OBJECT);
   assert(oop_null->_idx < nodes_size(), "should be created already");
   add_java_object(oop_null, PointsToNode::NoEscape);
   null_obj = ptnode_adr(oop_null->_idx)->as_JavaObject();
-  set_not_scalar_replaceable(null_obj NOT_PRODUCT(COMMA "Null object"));
+  null_obj->set_scalar_replaceable(false);
   if (UseCompressedOops) {
     Node* noop_null = igvn->zerocon(T_NARROWOOP);
     assert(noop_null->_idx < nodes_size(), "should be created already");
@@ -385,7 +385,7 @@ bool ConnectionGraph::compute_escape() {
     _igvn->set_delay_transform(true);
     for (uint i = 0; i < reducible_merges.size(); i++ ) {
       Node* n = reducible_merges.at(i);
-      reduce_this_phi(n->as_Phi());
+      reduce_phi(n->as_Phi());
     }
     _igvn->set_delay_transform(delay);
   }
@@ -931,7 +931,7 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
         es = PointsToNode::GlobalEscape;
       }
       PointsToNode* ptn_con = add_java_object(n, es);
-      set_not_scalar_replaceable(ptn_con NOT_PRODUCT(COMMA "Constant pointer"));
+      ptn_con->set_scalar_replaceable(false);
       break;
     }
     case Op_CreateEx: {
@@ -1025,7 +1025,7 @@ void ConnectionGraph::add_node_to_connection_graph(Node *n, Unique_Node_List *de
     }
     case Op_ThreadLocal: {
       PointsToNode* ptn_thr = add_java_object(n, PointsToNode::ArgEscape);
-      set_not_scalar_replaceable(ptn_thr NOT_PRODUCT(COMMA "Constant pointer"));
+      ptn_thr->set_scalar_replaceable(false);
       break;
     }
     case Op_Blackhole: {
@@ -2251,7 +2251,7 @@ void ConnectionGraph::adjust_scalar_replaceable_state(JavaObjectNode* jobj, Uniq
       // 1. An object is not scalar replaceable if the field into which it is
       // stored has unknown offset (stored into unknown element of an array).
       if (field->offset() == Type::OffsetBot) {
-        set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "is stored at unknown offset"));
+        jobj->set_scalar_replaceable(false);
         return;
       }
       for (BaseIterator i(field); i.has_next(); i.next()) {
@@ -2259,13 +2259,13 @@ void ConnectionGraph::adjust_scalar_replaceable_state(JavaObjectNode* jobj, Uniq
         // 2. An object is not scalar replaceable if the field into which it is
         // stored has multiple bases one of which is null.
         if ((base == null_obj) && (field->base_count() > 1)) {
-          set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "is stored into field with potentially null base"));
+          jobj->set_scalar_replaceable(false);
           return;
         }
         // 2.5. An object is not scalar replaceable if the field into which it is
         // stored has NSR base.
         if (!base->scalar_replaceable()) {
-          set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "is stored into field with NSR base"));
+          jobj->set_scalar_replaceable(false);
           return;
         }
       }
@@ -2290,8 +2290,8 @@ void ConnectionGraph::adjust_scalar_replaceable_state(JavaObjectNode* jobj, Uniq
           candidates.push(use_n);
         } else {
           // Mark all objects as NSR if we can't remove the merge
-          set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA trace_merged_message(ptn)));
-          set_not_scalar_replaceable(ptn NOT_PRODUCT(COMMA trace_merged_message(jobj)));
+          jobj->set_scalar_replaceable(false);
+          ptn->set_scalar_replaceable(false);
         }
       }
     }
@@ -2312,7 +2312,7 @@ void ConnectionGraph::adjust_scalar_replaceable_state(JavaObjectNode* jobj, Uniq
     // 4. An object is not scalar replaceable if it has a field with unknown
     // offset (array's element is accessed in loop).
     if (offset == Type::OffsetBot) {
-      set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "has field with unknown offset"));
+      jobj->set_scalar_replaceable(false);
       return;
     }
     // 5. Currently an object is not scalar replaceable if a LoadStore node
@@ -2327,14 +2327,14 @@ void ConnectionGraph::adjust_scalar_replaceable_state(JavaObjectNode* jobj, Uniq
         n->in(AddPNode::Address)->Opcode() == Op_CheckCastPP) {
       assert(n->in(AddPNode::Address)->bottom_type()->isa_rawptr(), "raw address so raw cast expected");
       assert(_igvn->type(n->in(AddPNode::Address)->in(1))->isa_oopptr(), "cast pattern at unsafe access expected");
-      set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "is used as base of mixed unsafe access"));
+      jobj->set_scalar_replaceable(false);
       return;
     }
 
     for (DUIterator_Fast imax, i = n->fast_outs(imax); i < imax; i++) {
       Node* u = n->fast_out(i);
       if (u->is_LoadStore() || (u->is_Mem() && u->as_Mem()->is_mismatched_access())) {
-        set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "is used in LoadStore or mismatched access"));
+        jobj->set_scalar_replaceable(false);
         return;
       }
     }
@@ -2363,8 +2363,8 @@ void ConnectionGraph::adjust_scalar_replaceable_state(JavaObjectNode* jobj, Uniq
         // this field's base by now.
         if (base->is_JavaObject() && base != jobj) {
           // Mark all bases.
-          set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "may point to more than one object"));
-          set_not_scalar_replaceable(base NOT_PRODUCT(COMMA "may point to more than one object"));
+          jobj->set_scalar_replaceable(false);
+          base->set_scalar_replaceable(false);
         }
       }
 
@@ -2403,7 +2403,7 @@ void ConnectionGraph::find_scalar_replaceable_allocs(GrowableArray<JavaObjectNod
             // An object is not scalar replaceable if the field into which
             // it is stored has NSR base.
             if ((base != null_obj) && !base->scalar_replaceable()) {
-              set_not_scalar_replaceable(jobj NOT_PRODUCT(COMMA "is stored into field with NSR base"));
+              jobj->set_scalar_replaceable(false);
               found_nsr_alloc = true;
               break;
             }
