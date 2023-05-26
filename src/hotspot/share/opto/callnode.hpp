@@ -513,9 +513,9 @@ class SafePointScalarObjectNode: public TypeNode {
                                   // It is relative to the last (youngest) jvms->_scloff.
   uint _n_fields;                 // Number of non-static fields of the scalarized object.
 
-  Node* _alloc;                   // Just for debugging purposes.
-
   bool _is_auto_box; // True if the scalarized object is an auto box.
+
+  Node* _alloc;                   // Just for debugging purposes.
 
   virtual uint hash() const;
   virtual bool cmp( const Node &n ) const;

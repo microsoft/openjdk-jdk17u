@@ -138,6 +138,12 @@ void C2Compiler::compile_method(ciEnv* env, ciMethod* target, int entry_bci, boo
         env->report_failure(C.failure_reason());
         continue;  // retry
       }
+      if (C.failure_reason_is(retry_no_reduce_allocation_merges())) {
+        assert(do_reduce_allocation_merges, "must make progress");
+        do_reduce_allocation_merges = false;
+        env->report_failure(C.failure_reason());
+        continue;  // retry
+      }
       if (C.failure_reason_is(retry_no_locks_coarsening())) {
         assert(do_locks_coarsening, "must make progress");
         do_locks_coarsening = false;

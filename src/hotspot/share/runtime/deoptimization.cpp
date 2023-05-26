@@ -234,7 +234,7 @@ static bool rematerialize_objects(JavaThread* thread, int exec_mode, CompiledMet
     if (TraceDeoptimization) {
       ttyLocker ttyl;
       tty->print_cr("REALLOC OBJECTS in thread " INTPTR_FORMAT, p2i(deoptee_thread));
-      Deoptimization::print_objects(objects, realloc_failures, &deoptee, &map);
+      Deoptimization::print_objects(objects, realloc_failures);
     }
 #endif
   }
@@ -1503,36 +1503,16 @@ bool Deoptimization::relock_objects(JavaThread* thread, GrowableArray<MonitorInf
 
 #ifndef PRODUCT
 // print information about reallocated objects
-void Deoptimization::print_objects(GrowableArray<ScopeValue*>* objects, bool realloc_failures,
-                                   frame* frame, RegisterMap* reg_map) {
+void Deoptimization::print_objects(GrowableArray<ScopeValue*>* objects, bool realloc_failures) {
   fieldDescriptor fd;
 
   for (int i = 0; i < objects->length(); i++) {
-    ObjectValue* sv = nullptr;
-    Klass* k = nullptr;
-
-    if (objects->at(i)->is_object_merge()) {
-      ObjectMergeValue* merged = objects->at(i)->as_ObjectMergeValue();
-      sv = merged->select(frame, reg_map);
-      // Klass may be null if the object was actually a NSR input of a merge.
-      k = sv->klass() != nullptr ? java_lang_Class::as_Klass(sv->klass()->as_ConstantOopReadValue()->value()()) : nullptr;
-    } else if (objects->at(i)->is_object()) {
-      sv = objects->at(i)->as_ObjectValue();
-      // This object is only a candidate inside an ObjectMergeValue
-      if (sv->is_only_merge_sr_candidate()) {
-        continue;
-      }
-      k = java_lang_Class::as_Klass(sv->klass()->as_ConstantOopReadValue()->value()());
-    }
+    ObjectValue* sv = (ObjectValue*) objects->at(i);
+    Klass* k = java_lang_Class::as_Klass(sv->klass()->as_ConstantOopReadValue()->value()());
     Handle obj = sv->value();
 
-    tty->print("     object <" INTPTR_FORMAT ">", p2i(sv->value()()));
-    if (k == nullptr) {
-      tty->print(" NSR input from an allocation merge.");
-    } else {
-      tty->print(" of type ");
-      k->print_value();
-    }
+    tty->print("     object <" INTPTR_FORMAT "> of type ", p2i(sv->value()()));
+    k->print_value();
     assert(obj.not_null() || realloc_failures, "reallocation was missed");
     if (obj.is_null()) {
       tty->print(" allocation failed");
@@ -1541,7 +1521,7 @@ void Deoptimization::print_objects(GrowableArray<ScopeValue*>* objects, bool rea
     }
     tty->cr();
 
-    if (Verbose && !obj.is_null() && k != nullptr) {
+    if (Verbose && !obj.is_null()) {
       k->oop_print_on(obj(), tty);
     }
   }
