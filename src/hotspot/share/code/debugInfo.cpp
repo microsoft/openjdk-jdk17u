@@ -166,7 +166,7 @@ void ObjectValue::set_value(oop value) {
 }
 
 void ObjectValue::read_object(DebugInfoReadStream* stream) {
-  _only_merge_sr_candidate = stream->read_bool();
+  _is_root = stream->read_bool();
   _klass = read_from(stream);
   assert(_klass->is_constant_oop(), "should be constant java mirror oop");
   int length = stream->read_int();
@@ -184,7 +184,7 @@ void ObjectValue::write_on(DebugInfoWriteStream* stream) {
     set_visited(true);
     stream->write_int(is_auto_box() ? AUTO_BOX_OBJECT_CODE : OBJECT_CODE);
     stream->write_int(_id);
-    stream->write_bool(_only_merge_sr_candidate);
+    stream->write_bool(_is_root);
     _klass->write_on(stream);
     int length = _field_values.length();
     stream->write_int(length);
@@ -195,9 +195,9 @@ void ObjectValue::write_on(DebugInfoWriteStream* stream) {
 }
 
 void ObjectValue::print_on(outputStream* st) const {
-  st->print("%s: ID=%d, is_merge_candidate=%d, skip_field_assignment=%d, N.Fields=%d",
+  st->print("%s: ID=%d, is_root=%d, N.Fields=%d",
             is_auto_box() ? "box_obj" : "obj", _id,
-            _only_merge_sr_candidate, _skip_field_assignment, _field_values.length());
+            _is_root, _field_values.length());
   st->print_cr(", klass: %s ", java_lang_Class::as_Klass(_klass->as_ConstantOopReadValue()->value()())->external_name());
   st->print("Fields: ");
   print_fields_on(st);
@@ -224,15 +224,8 @@ void ObjectValue::print_fields_on(outputStream* st) const {
 // merges in C2. This method will select which path the allocation merge
 // took during execution of the Trap that triggered the rematerialization
 // of the object.
-ObjectValue* ObjectMergeValue::select(frame* fr, RegisterMap* reg_map) {
-  assert(fr != nullptr && reg_map != nullptr, "sanity");
-
-  // If we call select again on the same merge we should return the same result
-  if (_selected != nullptr) {
-    return _selected;
-  }
-
-  StackValue* sv_selector = StackValue::create_stack_value(fr, reg_map, _selector);
+ObjectValue* ObjectMergeValue::select(frame& fr, RegisterMap& reg_map) {
+  StackValue* sv_selector = StackValue::create_stack_value(&fr, &reg_map, _selector);
   jint selector = sv_selector->get_int();
 
   // If the selector is '-1' it means that execution followed the path
@@ -240,34 +233,32 @@ ObjectValue* ObjectMergeValue::select(frame* fr, RegisterMap* reg_map) {
   // Otherwise, it is the index in _possible_objects array that holds
   // the description of the scalar replaced object.
   if (selector == -1) {
-    StackValue* sv_merge_pointer = StackValue::create_stack_value(fr, reg_map, _merge_pointer);
+    StackValue* sv_merge_pointer = StackValue::create_stack_value(&fr, &reg_map, _merge_pointer);
     _selected = new ObjectValue(id());
 
     // Retrieve the pointer to the real object and use it as if we had
     // allocated it during the deoptimization
     _selected->set_value(sv_merge_pointer->get_obj()());
 
-    // No need for field assignment as the object wasn't really scalar replaced
-    _selected->set_skip_field_assignment();
-
-    return _selected;
+    // No need to rematerialize
+    return nullptr;
   } else {
     assert(selector < _possible_objects.length(), "sanity");
     _selected = (ObjectValue*) _possible_objects.at(selector);
 
-    // Exchange the id of the selected object and the merge object.
-    // I.e., the candidate essentially becomes the real deal.
-    int tmp = _selected->id();
-    _selected->set_id(id());
-    _id = tmp;
+    // Set it to true so that the object will get rematerialized
+    if (!_selected->is_root()) {
+      _selected->set_root(true);
 
-    // Candidate is not candidate anymore, it's the real object
-    _selected->set_merge_candidate(false);
-
-    // Returns null and that should indicate to the caller that
-    // one of the candidate objects, inside this merge, became
-    // a real object.
-    return nullptr;
+      // We can't assume that 'select(...)' will be called before we check if
+      // the candidate needs to be rematerialized or not. Therefore, we need to
+      // return the candidate, now set to 'not only merge candidate', and try to
+      // rematerialize it.
+      return _selected;
+    } else {
+      // Since the object was not only a candidate it will already be rematerialized on its own.
+      return nullptr;
+    }
   }
 }
 
@@ -279,7 +270,6 @@ void ObjectMergeValue::read_object(DebugInfoReadStream* stream) {
     ScopeValue* result = read_from(stream);
     assert(result->is_object(), "Candidate is not an object!");
     ObjectValue* obj = result->as_ObjectValue();
-    obj->set_merge_candidate(true);
     _possible_objects.append(obj);
   }
 }
@@ -303,14 +293,25 @@ void ObjectMergeValue::write_on(DebugInfoWriteStream* stream) {
 }
 
 void ObjectMergeValue::print_on(outputStream* st) const {
-  st->print("merge: ID=%d, N.Candidates=%d", _id, _possible_objects.length());
+  st->print("merge: ID=%d", _id);
 }
 
-void ObjectMergeValue::print_candidates_on(outputStream* st) const {
+void ObjectMergeValue::print_detailed(outputStream* st) const {
+  st->print("merge: ID=%d", _id);
+#ifndef PRODUCT
+  st->print(", selector=\"");
+    _selector->print_on(st);
+    st->print("\"");
+  st->print(", merge_pointer=\"");
+    _merge_pointer->print_on(st);
+    st->print("\"");
+#endif
+  st->print(", candidate objs=[%d", _possible_objects.at(0)->as_ObjectValue()->id());
   int ncandidates = _possible_objects.length();
-  for (int i = 0; i < ncandidates; i++) {
-    _possible_objects.at(i)->as_ObjectValue()->print_on(st);
+  for (int i = 1; i < ncandidates; i++) {
+    st->print(", %d", _possible_objects.at(i)->as_ObjectValue()->id());
   }
+  st->print("]");
 }
 
 // ConstantIntValue
