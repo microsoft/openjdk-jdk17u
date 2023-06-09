@@ -819,6 +819,7 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
   // Is it a safepoint scalar object node?
   if (local->is_SafePointScalarObject()) {
     SafePointScalarObjectNode* spobj = local->as_SafePointScalarObject();
+
     ObjectValue* sv = (ObjectValue*) sv_for_node_id(objs, spobj->_idx);
     if (sv == nullptr) {
       ciKlass* cik = t->is_oopptr()->klass();
@@ -834,7 +835,6 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
         (void)FillLocArray(sv->field_values()->length(), sfpt, fld_node, sv->field_values(), objs);
       }
     }
-
     array->append(sv);
     return;
   } else if (local->is_SafePointScalarMerge()) {
@@ -1019,6 +1019,18 @@ bool PhaseOutput::starts_bundle(const Node *n) const {
           _node_bundling_base[n->_idx].starts_bundle());
 }
 
+// Determine if there is a monitor that has 'ov' as its owner.
+bool PhaseOutput::contains_as_owner(GrowableArray<MonitorValue*> *monarray, ObjectValue *ov) const {
+  for (int k = 0; k < monarray->length(); k++) {
+    MonitorValue* mv = monarray->at(k);
+    if (mv->owner() == ov) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 //--------------------------Process_OopMap_Node--------------------------------
 void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
   // Handle special safepoint nodes for synchronization
@@ -1162,18 +1174,7 @@ void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
 
         for (int j = 0; j< merge->possible_objects()->length(); j++) {
           ObjectValue* ov = merge->possible_objects()->at(j)->as_ObjectValue();
-          bool is_root = locarray->contains(ov) || exparray->contains(ov);
-
-          if (!is_root) {
-            for (int k = 0; k < monarray->length(); k++) {
-              MonitorValue* mv = monarray->at(k);
-              if (mv->owner() == ov) {
-                is_root = true;
-                break;
-              }
-            }
-          }
-
+          bool is_root = locarray->contains(ov) || exparray->contains(ov) || contains_as_owner(monarray, ov);
           ov->set_root(is_root);
         }
       }
