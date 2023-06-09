@@ -249,7 +249,7 @@ class Compile : public Phase {
   const bool            _subsume_loads;         // Load can be matched as part of a larger op.
   const bool            _do_escape_analysis;    // Do escape analysis.
   const bool            _do_iterative_escape_analysis;    // Do iterative escape analysis.
-  const bool 		        _do_reduce_allocation_merges;  // Do try to reduce allocation merges.
+  const bool 		 _do_reduce_allocation_merges;  // Do try to reduce allocation merges.
   const bool            _install_code;          // Install the code that was compiled
   const bool            _eliminate_boxing;      // Do boxing elimination.
   const bool            _do_locks_coarsening;   // Do locks coarsening
