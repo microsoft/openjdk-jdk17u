@@ -553,15 +553,15 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
   bool reduce_merge_precheck = (safepoints == nullptr);
 
   Node* res = alloc->result_cast();
-  const TypeOopPtr* res_type = nullptr;
-  if (res == nullptr) {
+  const TypeOopPtr* res_type = NULL;
+  if (res == NULL) {
     // All users were eliminated.
   } else if (!res->is_CheckCastPP()) {
     NOT_PRODUCT(fail_eliminate = "Allocation does not have unique CheckCastPP";)
     can_eliminate = false;
   } else {
     res_type = igvn->type(res)->isa_oopptr();
-    if (res_type == nullptr) {
+    if (res_type == NULL) {
       NOT_PRODUCT(fail_eliminate = "Neither instance or array allocation";)
       can_eliminate = false;
     } else if (res_type->isa_aryptr()) {
@@ -573,7 +573,7 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
     }
   }
 
-  if (can_eliminate && res != nullptr) {
+  if (can_eliminate && res != NULL) {
     BarrierSetC2 *bs = BarrierSet::barrier_set()->barrier_set_c2();
     for (DUIterator_Fast jmax, j = res->fast_outs(jmax);
                                j < jmax && can_eliminate; j++) {
@@ -584,7 +584,7 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
         int offset = addp_type->offset();
 
         if (offset == Type::OffsetTop || offset == Type::OffsetBot) {
-          NOT_PRODUCT(fail_eliminate = "Undefined field reference";)
+          NOT_PRODUCT(fail_eliminate = "Undefined field referrence";)
           can_eliminate = false;
           break;
         }
@@ -596,7 +596,7 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
             if (n->is_Load() || n->is_LoadStore()) {
               NOT_PRODUCT(fail_eliminate = "Field load";)
             } else {
-              NOT_PRODUCT(fail_eliminate = "Not store field reference";)
+              NOT_PRODUCT(fail_eliminate = "Not store field referrence";)
             }
             can_eliminate = false;
           }
@@ -617,9 +617,9 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
           can_eliminate = false;
         }
         Node* sfptMem = sfpt->memory();
-        if (sfptMem == nullptr || sfptMem->is_top()) {
+        if (sfptMem == NULL || sfptMem->is_top()) {
           DEBUG_ONLY(disq_node = use;)
-          NOT_PRODUCT(fail_eliminate = "null or TOP memory";)
+          NOT_PRODUCT(fail_eliminate = "NULL or TOP memory";)
           can_eliminate = false;
         } else if (!reduce_merge_precheck) {
           safepoints->append_if_missing(sfpt);
@@ -634,7 +634,7 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
             NOT_PRODUCT(fail_eliminate = "Object is referenced by Phi";)
           }
           DEBUG_ONLY(disq_node = use;)
-        } else {
+        }else {
           if (use->Opcode() == Op_Return) {
             NOT_PRODUCT(fail_eliminate = "Object is return value";)
           } else {
@@ -651,18 +651,18 @@ bool PhaseMacroExpand::can_eliminate_allocation(PhaseIterGVN* igvn, AllocateNode
   if (PrintEliminateAllocations && safepoints != nullptr) {
     if (can_eliminate) {
       tty->print("Scalar ");
-      if (res == nullptr)
+      if (res == NULL)
         alloc->dump();
       else
         res->dump();
     } else if (alloc->_is_scalar_replaceable) {
       tty->print("NotScalar (%s)", fail_eliminate);
-      if (res == nullptr)
+      if (res == NULL)
         alloc->dump();
       else
         res->dump();
 #ifdef ASSERT
-      if (disq_node != nullptr) {
+      if (disq_node != NULL) {
           tty->print("  >>>> ");
           disq_node->dump();
       }
@@ -774,12 +774,12 @@ SafePointScalarObjectNode* PhaseMacroExpand::create_scalarized_object_descriptio
       if (is_reference_type(basic_elem_type)) {
         if (!elem_type->is_loaded()) {
           field_type = TypeInstPtr::BOTTOM;
-        } else if (field != nullptr && field->is_static_constant()) {
+        } else if (field != NULL && field->is_static_constant()) {
           ciObject* con = field->constant_value().as_object();
           // Do not "join" in the previous type; it doesn't add value,
           // and may yield a vacuous result if the field is of interface type.
           field_type = TypeOopPtr::make_from_constant(con)->isa_oopptr();
-          assert(field_type != nullptr, "field singleton type must be consistent");
+          assert(field_type != NULL, "field singleton type must be consistent");
         } else {
           field_type = TypeOopPtr::make_from_klass(elem_type->as_klass());
         }
@@ -866,21 +866,19 @@ bool PhaseMacroExpand::scalar_replacement(AllocateNode *alloc, GrowableArray <Sa
     JVMState *jvms = sfpt->jvms();
     sfpt->replace_edges_in_range(res, sobj, jvms->debug_start(), jvms->debug_end(), &_igvn);
     _igvn._worklist.push(sfpt);
-
     // keep it for rollback
     safepoints_done.append_if_missing(sfpt);
   }
-
   return true;
 }
 
 static void disconnect_projections(MultiNode* n, PhaseIterGVN& igvn) {
   Node* ctl_proj = n->proj_out_or_null(TypeFunc::Control);
   Node* mem_proj = n->proj_out_or_null(TypeFunc::Memory);
-  if (ctl_proj != nullptr) {
+  if (ctl_proj != NULL) {
     igvn.replace_node(ctl_proj, n->in(0));
   }
-  if (mem_proj != nullptr) {
+  if (mem_proj != NULL) {
     igvn.replace_node(mem_proj, n->in(TypeFunc::Memory));
   }
 }
@@ -888,7 +886,7 @@ static void disconnect_projections(MultiNode* n, PhaseIterGVN& igvn) {
 // Process users of eliminated allocation.
 void PhaseMacroExpand::process_users_of_allocation(CallNode *alloc) {
   Node* res = alloc->result_cast();
-  if (res != nullptr) {
+  if (res != NULL) {
     for (DUIterator_Last jmin, j = res->last_outs(jmin); j >= jmin; ) {
       Node *use = res->last_out(j);
       uint oc1 = res->outcnt();
