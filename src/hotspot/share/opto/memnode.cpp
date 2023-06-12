@@ -187,8 +187,6 @@ Node *MemNode::optimize_simple_memory_chain(Node *mchain, const TypeOopPtr *t_oo
           break;
         }
         result = proj_in->in(TypeFunc::Memory);
-      } else if (proj_in->is_top()) {
-        break; // dead code
       } else {
         assert(false, "unexpected projection");
       }
@@ -1524,13 +1522,13 @@ Node* LoadNode::split_through_phi(PhaseGVN* phase, bool ignore_missing_instance_
   if (req() > 3) {
     assert(is_LoadVector() && Opcode() != Op_LoadVector, "load has too many inputs");
     // LoadVector subclasses such as LoadVectorMasked have extra inputs that the logic below doesn't take into account
-    return nullptr;
+    return NULL;
   }
   Node* mem     = in(Memory);
   Node* address = in(Address);
   const TypeOopPtr *t_oop = phase->type(address)->isa_oopptr();
 
-  assert((t_oop != nullptr) &&
+  assert((t_oop != NULL) &&
          (ignore_missing_instance_id ||
           t_oop->is_known_instance_field() ||
           t_oop->is_ptr_to_boxed_value()), "invalid conditions");
@@ -1538,19 +1536,19 @@ Node* LoadNode::split_through_phi(PhaseGVN* phase, bool ignore_missing_instance_
   Compile* C = phase->C;
   intptr_t ignore = 0;
   Node*    base = AddPNode::Ideal_base_and_offset(address, phase, ignore);
-  bool base_is_phi = (base != nullptr) && base->is_Phi();
+  bool base_is_phi = (base != NULL) && base->is_Phi();
   bool load_boxed_values = t_oop->is_ptr_to_boxed_value() && C->aggressive_unboxing() &&
-                           (base != nullptr) && (base == address->in(AddPNode::Base)) &&
+                           (base != NULL) && (base == address->in(AddPNode::Base)) &&
                            phase->type(base)->higher_equal(TypePtr::NOTNULL);
 
   if (!((mem->is_Phi() || base_is_phi) &&
         (ignore_missing_instance_id || load_boxed_values || t_oop->is_known_instance_field()))) {
-    return nullptr; // Neither memory or base are Phi
+    return NULL; // memory is not Phi
   }
 
   if (mem->is_Phi()) {
     if (!stable_phi(mem->as_Phi(), phase)) {
-      return nullptr; // Wait stable graph
+      return NULL; // Wait stable graph
     }
     uint cnt = mem->req();
     // Check for loop invariant memory.
