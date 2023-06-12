@@ -94,7 +94,7 @@ void ScopeDesc::decode_body() {
 
 
 GrowableArray<ScopeValue*>* ScopeDesc::decode_scope_values(int decode_offset) {
-  if (decode_offset == DebugInformationRecorder::serialized_null) return nullptr;
+  if (decode_offset == DebugInformationRecorder::serialized_null) return NULL;
   DebugInfoReadStream* stream = stream_at(decode_offset);
   int length = stream->read_int();
   GrowableArray<ScopeValue*>* result = new GrowableArray<ScopeValue*> (length);
@@ -105,7 +105,7 @@ GrowableArray<ScopeValue*>* ScopeDesc::decode_scope_values(int decode_offset) {
 }
 
 GrowableArray<ScopeValue*>* ScopeDesc::decode_object_values(int decode_offset) {
-  if (decode_offset == DebugInformationRecorder::serialized_null) return nullptr;
+  if (decode_offset == DebugInformationRecorder::serialized_null) return NULL;
   GrowableArray<ScopeValue*>* result = new GrowableArray<ScopeValue*>();
   DebugInfoReadStream* stream = new DebugInfoReadStream(_code, decode_offset, result);
   int length = stream->read_int();
@@ -119,7 +119,7 @@ GrowableArray<ScopeValue*>* ScopeDesc::decode_object_values(int decode_offset) {
 
 
 GrowableArray<MonitorValue*>* ScopeDesc::decode_monitor_values(int decode_offset) {
-  if (decode_offset == DebugInformationRecorder::serialized_null) return nullptr;
+  if (decode_offset == DebugInformationRecorder::serialized_null) return NULL;
   DebugInfoReadStream* stream  = stream_at(decode_offset);
   int length = stream->read_int();
   GrowableArray<MonitorValue*>* result = new GrowableArray<MonitorValue*> (length);
@@ -186,7 +186,7 @@ bool ScopeDesc::is_top() const {
 }
 
 ScopeDesc* ScopeDesc::sender() const {
-  if (is_top()) return nullptr;
+  if (is_top()) return NULL;
   return new ScopeDesc(this);
 }
 
@@ -209,12 +209,12 @@ void ScopeDesc::print_value_on(outputStream* st) const {
 }
 
 void ScopeDesc::print_on(outputStream* st) const {
-  print_on(st, nullptr);
+  print_on(st, NULL);
 }
 
 void ScopeDesc::print_on(outputStream* st, PcDesc* pd) const {
   // header
-  if (pd != nullptr) {
+  if (pd != NULL) {
     st->print_cr("ScopeDesc(pc=" PTR_FORMAT " offset=%x):", p2i(pd->real_pc(_code)), pd->pc_offset());
   }
 
@@ -232,7 +232,7 @@ void ScopeDesc::print_on(outputStream* st, PcDesc* pd) const {
   }
   // locals
   { GrowableArray<ScopeValue*>* l = ((ScopeDesc*) this)->locals();
-    if (l != nullptr) {
+    if (l != NULL) {
       st->print_cr("   Locals");
       for (int index = 0; index < l->length(); index++) {
         st->print("    - l%d: ", index);
@@ -243,7 +243,7 @@ void ScopeDesc::print_on(outputStream* st, PcDesc* pd) const {
   }
   // expressions
   { GrowableArray<ScopeValue*>* l = ((ScopeDesc*) this)->expressions();
-    if (l != nullptr) {
+    if (l != NULL) {
       st->print_cr("   Expression stack");
       for (int index = 0; index < l->length(); index++) {
         st->print("    - @%d: ", index);
@@ -254,7 +254,7 @@ void ScopeDesc::print_on(outputStream* st, PcDesc* pd) const {
   }
   // monitors
   { GrowableArray<MonitorValue*>* l = ((ScopeDesc*) this)->monitors();
-    if (l != nullptr) {
+    if (l != NULL) {
       st->print_cr("   Monitor stack");
       for (int index = 0; index < l->length(); index++) {
         st->print("    - @%d: ", index);
@@ -265,7 +265,7 @@ void ScopeDesc::print_on(outputStream* st, PcDesc* pd) const {
   }
 
 #if COMPILER2_OR_JVMCI
-  if (NOT_JVMCI(DoEscapeAnalysis &&) is_top() && _objects != nullptr) {
+  if (NOT_JVMCI(DoEscapeAnalysis &&) is_top() && _objects != NULL) {
     st->print_cr("   Objects");
     for (int i = 0; i < _objects->length(); i++) {
       ObjectValue* sv = (ObjectValue*) _objects->at(i);
@@ -292,7 +292,7 @@ void ScopeDesc::verify() {
 
   // check if we have any illegal elements on the expression stack
   { GrowableArray<ScopeValue*>* l = expressions();
-    if (l != nullptr) {
+    if (l != NULL) {
       for (int index = 0; index < l->length(); index++) {
        //guarantee(!l->at(index)->is_illegal(), "expression element cannot be illegal");
       }
