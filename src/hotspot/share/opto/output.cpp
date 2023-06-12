@@ -820,13 +820,14 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
   if (local->is_SafePointScalarObject()) {
     SafePointScalarObjectNode* spobj = local->as_SafePointScalarObject();
 
-    ObjectValue* sv = (ObjectValue*) sv_for_node_id(objs, spobj->_idx);
-    if (sv == nullptr) {
+    ObjectValue* sv = sv_for_node_id(objs, spobj->_idx);
+    if (sv == NULL) {
       ciKlass* cik = t->is_oopptr()->klass();
       assert(cik->is_instance_klass() ||
             cik->is_array_klass(), "Not supported allocation.");
-      sv = new ObjectValue(spobj->_idx,
-                           new ConstantOopWriteValue(cik->java_mirror()->constant_encoding()));
+      ScopeValue* klass_sv = new ConstantOopWriteValue(cik->java_mirror()->constant_encoding());
+      sv = new AutoBoxObjectValue(spobj->_idx, klass_sv)
+             : new ObjectValue(spobj->_idx, klass_sv);
       set_sv_for_object_node(objs, sv);
 
       uint first_ind = spobj->first_index(sfpt->jvms());
@@ -1125,12 +1126,12 @@ void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
       Node* obj_node = sfn->monitor_obj(jvms, idx);
 
       // Create ScopeValue for object
-      ScopeValue *scval = nullptr;
+      ScopeValue *scval = NULL;
 
       if (obj_node->is_SafePointScalarObject()) {
         SafePointScalarObjectNode* spobj = obj_node->as_SafePointScalarObject();
         scval = PhaseOutput::sv_for_node_id(objs, spobj->_idx);
-        if (scval == nullptr) {
+        if (scval == NULL) {
           const Type *t = spobj->bottom_type();
           ciKlass* cik = t->is_oopptr()->klass();
           assert(cik->is_instance_klass() ||
