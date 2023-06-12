@@ -824,10 +824,10 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
     if (sv == NULL) {
       ciKlass* cik = t->is_oopptr()->klass();
       assert(cik->is_instance_klass() ||
-            cik->is_array_klass(), "Not supported allocation.");
+           cik->is_array_klass(), "Not supported allocation.");
       ScopeValue* klass_sv = new ConstantOopWriteValue(cik->java_mirror()->constant_encoding());
-      sv = new AutoBoxObjectValue(spobj->_idx, klass_sv)
-             : new ObjectValue(spobj->_idx, klass_sv);
+      sv = spobj->is_auto_box() ? new AutoBoxObjectValue(spobj->_idx, klass_sv)
+                                    : new ObjectValue(spobj->_idx, klass_sv);
       set_sv_for_object_node(objs, sv);
 
       uint first_ind = spobj->first_index(sfpt->jvms());
