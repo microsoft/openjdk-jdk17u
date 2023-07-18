@@ -824,7 +824,7 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
     if (sv == NULL) {
       ciKlass* cik = t->is_oopptr()->klass();
       assert(cik->is_instance_klass() ||
-             cik->is_array_klass(), "Not supported allocation.");
+           cik->is_array_klass(), "Not supported allocation.");
       ScopeValue* klass_sv = new ConstantOopWriteValue(cik->java_mirror()->constant_encoding());
       sv = spobj->is_auto_box() ? new AutoBoxObjectValue(spobj->_idx, klass_sv)
                                     : new ObjectValue(spobj->_idx, klass_sv);
@@ -837,6 +837,31 @@ void PhaseOutput::FillLocArray( int idx, MachSafePointNode* sfpt, Node *local,
       }
     }
     array->append(sv);
+    return;
+  } else if (local->is_SafePointScalarMerge()) {
+    SafePointScalarMergeNode* smerge = local->as_SafePointScalarMerge();
+    ObjectMergeValue* mv = (ObjectMergeValue*) sv_for_node_id(objs, smerge->_idx);
+
+    if (mv == NULL) {
+      GrowableArray<ScopeValue*> deps;
+
+      int merge_pointer_idx = smerge->merge_pointer_idx(sfpt->jvms());
+      (void)FillLocArray(0, sfpt, sfpt->in(merge_pointer_idx), &deps, objs);
+      assert(deps.length() == 1, "missing value");
+
+      int selector_idx = smerge->selector_idx(sfpt->jvms());
+      (void)FillLocArray(1, NULL, sfpt->in(selector_idx), &deps, NULL);
+      assert(deps.length() == 2, "missing value");
+
+      mv = new ObjectMergeValue(smerge->_idx, deps.at(0), deps.at(1));
+      set_sv_for_object_node(objs, mv);
+
+      for (uint i = 1; i < smerge->req(); i++) {
+        Node* obj_node = smerge->in(i);
+        (void)FillLocArray(mv->possible_objects()->length(), sfpt, obj_node, mv->possible_objects(), objs);
+      }
+    }
+    array->append(mv);
     return;
   }
 
@@ -995,6 +1020,18 @@ bool PhaseOutput::starts_bundle(const Node *n) const {
           _node_bundling_base[n->_idx].starts_bundle());
 }
 
+// Determine if there is a monitor that has 'ov' as its owner.
+bool PhaseOutput::contains_as_owner(GrowableArray<MonitorValue*> *monarray, ObjectValue *ov) const {
+  for (int k = 0; k < monarray->length(); k++) {
+    MonitorValue* mv = monarray->at(k);
+    if (mv->owner() == ov) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 //--------------------------Process_OopMap_Node--------------------------------
 void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
   // Handle special safepoint nodes for synchronization
@@ -1127,6 +1164,21 @@ void PhaseOutput::Process_OopMap_Node(MachNode *mach, int current_offset) {
       Location basic_lock = Location::new_stk_loc(Location::normal,C->regalloc()->reg2offset(box_reg));
       bool eliminated = (box_node->is_BoxLock() && box_node->as_BoxLock()->is_eliminated());
       monarray->append(new MonitorValue(scval, basic_lock, eliminated));
+    }
+
+    // Mark ObjectValue nodes as root nodes if they are directly
+    // referenced in the JVMS.
+    for (int i = 0; i < objs->length(); i++) {
+      ScopeValue* sv = objs->at(i);
+      if (sv->is_object_merge()) {
+        ObjectMergeValue* merge = sv->as_ObjectMergeValue();
+
+        for (int j = 0; j< merge->possible_objects()->length(); j++) {
+          ObjectValue* ov = merge->possible_objects()->at(j)->as_ObjectValue();
+          bool is_root = locarray->contains(ov) || exparray->contains(ov) || contains_as_owner(monarray, ov);
+          ov->set_root(is_root);
+        }
+      }
     }
 
     // We dump the object pool first, since deoptimization reads it in first.
