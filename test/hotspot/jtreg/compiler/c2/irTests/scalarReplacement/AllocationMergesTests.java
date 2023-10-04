@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,7 +31,7 @@ import compiler.lib.ir_framework.*;
  * @bug 8281429
  * @summary Tests that C2 can correctly scalar replace some object allocation merges.
  * @library /test/lib /
- * @requires vm.bits == 64 & vm.compiler2.enabled & vm.opt.final.UseCompressedOops & vm.opt.final.EliminateAllocations
+ * @requires vm.debug == true & vm.bits == 64 & vm.compiler2.enabled & vm.opt.final.UseCompressedOops & vm.opt.final.EliminateAllocations
  * @run driver compiler.c2.irTests.scalarReplacement.AllocationMergesTests
  */
 public class AllocationMergesTests {
@@ -39,9 +39,13 @@ public class AllocationMergesTests {
     private static Point global_escape = new Point(2022, 2023);
 
     public static void main(String[] args) {
-        TestFramework.runWithFlags("-XX:+ReduceAllocationMerges",
+        TestFramework.runWithFlags("-XX:+UnlockDiagnosticVMOptions",
+                                   "-XX:+ReduceAllocationMerges",
                                    "-XX:+TraceReduceAllocationMerges",
                                    "-XX:+DeoptimizeALot",
+                                   "-XX:CompileCommand=inline,*::charAt*",
+                                   "-XX:CompileCommand=inline,*PicturePositions::*",
+                                   "-XX:CompileCommand=inline,*Point::*",
                                    "-XX:CompileCommand=exclude,*::dummy*");
     }
 
@@ -91,9 +95,11 @@ public class AllocationMergesTests {
                  "testString_two_C2"
                 })
     public void runner(RunInfo info) {
+        invocations++;
+
         Random random = info.getRandom();
-        boolean cond1 = random.nextBoolean();
-        boolean cond2 = random.nextBoolean();
+        boolean cond1 = invocations % 2 == 0;
+        boolean cond2 = !cond1;
 
         int l = random.nextInt();
         int w = random.nextInt();
@@ -550,9 +556,10 @@ public class AllocationMergesTests {
             new F();
         }
 
+        int res = s.a;
         dummy();
 
-        return s.a;
+        return res;
     }
 
     @Test
@@ -1195,12 +1202,13 @@ public class AllocationMergesTests {
             global_escape = p;
         }
 
+        int res = p.x;
         if (is_c2) {
             // This will show up to C2 as a trap.
             dummy_defaults();
         }
 
-        return p.y;
+        return res;
     }
 
     @Test
