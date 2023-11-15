@@ -82,6 +82,7 @@
 #endif
 
 #include <windows.h>
+#include <winternl.h> // Include for RtlGetVersion and related structures
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/timeb.h>
@@ -3197,52 +3198,126 @@ static char* allocate_pages_individually(size_t bytes, char* addr, DWORD flags,
   return p_buf;
 }
 
-static size_t large_page_init_decide_size() {
-  // print a warning if any large page related flag is specified on command line
-  bool warn_on_failure = !FLAG_IS_DEFAULT(UseLargePages) ||
-                         !FLAG_IS_DEFAULT(LargePageSizeInBytes);
+// Global variable to hold the major version of the OS
+int major_version = 0;
 
-#define WARN(msg) if (warn_on_failure) { warning(msg); }
-
-  if (!request_lock_memory_privilege()) {
-    WARN("JVM cannot use large page memory because it does not have enough privilege to lock pages in memory.");
-    return 0;
-  }
-
-  size_t size = GetLargePageMinimum();
-  if (size == 0) {
-    WARN("Large page is not supported by the processor.");
-    return 0;
-  }
-
-#if defined(IA32) || defined(AMD64)
-  if (size > 4*M || LargePageSizeInBytes > 4*M) {
-    WARN("JVM cannot use large pages bigger than 4mb.");
-    return 0;
-  }
+// Manually define NTSTATUS and STATUS_SUCCESS if not already defined
+#ifndef NTSTATUS
+#define NTSTATUS LONG
 #endif
 
-  if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
-    size = LargePageSizeInBytes;
-  }
+#ifndef STATUS_SUCCESS
+#define STATUS_SUCCESS ((NTSTATUS)0x00000000L)
+#endif
+
+typedef NTSTATUS(WINAPI* RtlGetVersionPtr)(PRTL_OSVERSIONINFOW);
+
+
+static void set_os_major_version() {
+    HMODULE hMod = ::GetModuleHandleW(L"ntdll.dll");
+    if (hMod) {
+        RtlGetVersionPtr fxPtr = (RtlGetVersionPtr)::GetProcAddress(hMod, "RtlGetVersion");
+        if (fxPtr != nullptr) {
+            RTL_OSVERSIONINFOW rovi = {};
+            rovi.dwOSVersionInfoSize = sizeof(rovi);
+            if (STATUS_SUCCESS == fxPtr(&rovi)) {
+                major_version = rovi.dwMajorVersion;
+            }
+            else {
+                major_version = -1; // Set to -1 in case of failure
+            }
+        }
+        else {
+            major_version = -1; // Set to -1 in case of failure
+        }
+    }
+    else {
+        major_version = -1; // Set to -1 in case of failure
+    }
+}
+
+static size_t large_page_init_decide_size() {
+    // print a warning if any large page related flag is specified on command line
+    bool warn_on_failure = !FLAG_IS_DEFAULT(UseLargePages) ||
+        !FLAG_IS_DEFAULT(LargePageSizeInBytes);
+
+#define WARN(msg) if (warn_on_failure) { warning(msg); }
+#define WARN1(msg,p) if (warn_on_failure) { warning(msg,p); }
+
+    if (!request_lock_memory_privilege()) {
+        WARN("JVM cannot use large page memory because it does not have enough privilege to lock pages in memory.");
+        return 0;
+    }
+
+    size_t size = GetLargePageMinimum();
+    if (size == 0) {
+        WARN("Large page is not supported by the processor.");
+        return 0;
+    }
+
+    // Check if OS version is 11 or greater
+    if (major_version >= 11) {
+        // OS-specific logic for versions 11 or greater
+        // You can implement specific checks or logic here for newer OS versions
+}
+    else {
+        // Existing logic for OS versions less than 11
+#if defined(IA32)
+        if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
+            WARN("JVM cannot use large pages bigger than 4mb.");
+            return 0;
+        }
+#elif defined(AMD64)
+        if (EnableAllLargePageSizes) {
+            if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
+                WARN("JVM cannot use large pages bigger than 4mb.");
+                return 0;
+            }
+        }
+#endif
+    }
+
+    if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
+        size = LargePageSizeInBytes;
+    }
+    else {
+        WARN1("JVM cannot use large pages that are not a multiple of minimum large page size (%d), defaulting to minimum page size.", size);
+    }
 
 #undef WARN
 
-  return size;
+    return size;
 }
 
 void os::large_page_init() {
-  if (!UseLargePages) {
-    return;
-  }
+    if (!UseLargePages) {
+        return;
+    }
 
-  _large_page_size = large_page_init_decide_size();
-  const size_t default_page_size = (size_t) vm_page_size();
-  if (_large_page_size > default_page_size) {
-    _page_sizes.add(_large_page_size);
-  }
+     set_os_major_version();
+    _large_page_size = large_page_init_decide_size();
+    const size_t default_page_size = os::vm_page_size();
+    if (_large_page_size > default_page_size) {
 
-  UseLargePages = _large_page_size != 0;
+#if !defined(IA32)
+        // Check if the OS version is 11 or higher
+        if (major_version >= 11 && EnableAllLargePageSizes) {
+
+            // Additional logic needed for ARM architecture
+            size_t min_size = GetLargePageMinimum();
+
+            // Populate _page_sizes with large page sizes less than or equal to _large_page_size.
+            for (size_t page_size = min_size; page_size <= _large_page_size; page_size *= 2) {
+                _page_sizes.add(page_size);
+            }
+        }
+#endif
+
+        _page_sizes.add(_large_page_size);
+    }
+
+    // Set UseLargePages based on whether a large page size was successfully determined
+    UseLargePages = _large_page_size != 0;
 }
 
 int os::create_file_for_heap(const char* dir) {
