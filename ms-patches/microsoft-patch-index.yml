@@ -16,7 +16,7 @@
 # Patches that we are applying to each release.
 active-patches:
 # - ms-patches/microsoft-patch-index // this patch branch is required for all releases
-  - ms-patches/reduced-allocation-merges
+  - ms-patches/reduce-allocation-merges
   - ms-patches/sst
 
 
