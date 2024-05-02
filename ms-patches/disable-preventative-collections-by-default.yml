@@ -1,0 +1,9 @@
+title: Disable Preventative Collections By Default
+- work_item: 2047935 
+- jbs_bug: none
+- author: macarte
+- owner: macarte
+- contributors:
+- details:
+  - Disable G1 preventive collections by default
+- release_note: Disable G1 preventive collections by default
