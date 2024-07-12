@@ -46,6 +46,7 @@ class MachNode;
 class MachSafePointNode;
 class Node;
 class PhaseCFG;
+class JVMState;
 #ifndef PRODUCT
 #define DEBUG_ARG(x) , x
 #else
@@ -250,6 +251,9 @@ public:
 
   bool starts_bundle(const Node *n) const;
   bool contains_as_owner(GrowableArray<MonitorValue*> *monarray, ObjectValue *ov) const;
+  bool contains_as_scalarized(JVMState* jvms, MachSafePointNode* sfn,
+                              GrowableArray<ScopeValue*>* objs,
+                              ObjectValue* ov) const;
 
   // Dump formatted assembly
 #if defined(SUPPORT_OPTO_ASSEMBLY)
