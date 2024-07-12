@@ -46,6 +46,7 @@ class MachNode;
 class MachSafePointNode;
 class Node;
 class PhaseCFG;
+class JVMState;
 #ifndef PRODUCT
 #define DEBUG_ARG(x) , x
 #else
