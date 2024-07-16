@@ -1511,6 +1511,8 @@ else
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libterminatedThread += -lpthread
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libatExit += -ljvm
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libnativeStack += -lpthread
+
+    BUILD_HOTSPOT_JTREG_EXCLUDE += exeGetProcessorInfo.c
 endif
 
 # This evaluation is expensive and should only be done if this target was
