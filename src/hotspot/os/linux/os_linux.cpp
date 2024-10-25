@@ -1437,7 +1437,54 @@ const char* os::dll_file_extension() { return ".so"; }
 
 // This must be hard coded because it's the system's temporary
 // directory not the java application's temp directory, ala java.io.tmpdir.
-const char* os::get_temp_directory() { return "/tmp"; }
+// Use half of PATH_MAX characters for the custom temporary path to allow
+// paths of length (PATH_MAX / 2) to be appended to the custom temp path.
+#define MAX_CACHED_TEMP_PATH_LENGTH (PATH_MAX / 2)
+
+// This method allows for overriding the system's temporary directory via the -XX:SystemTempPath option
+const char* os::get_temp_directory() {
+  static const char* cached_temp_path = NULL;
+  static const char* default_tmp_path = "/tmp";
+
+  if (cached_temp_path == NULL) {
+    bool use_default_tmp_path = true;
+
+    if (SystemTempPath != NULL) {
+      size_t new_tmp_path_length = strlen(SystemTempPath);
+
+      assert(new_tmp_path_length > 0, "SystemTempPath must have positive length");
+      assert(new_tmp_path_length < MAX_CACHED_TEMP_PATH_LENGTH, "SystemTempPath exceeds allowed length");
+
+      if (new_tmp_path_length > 0 && new_tmp_path_length < MAX_CACHED_TEMP_PATH_LENGTH) {
+        struct stat stat_buf;
+        bool path_exists = os::stat(SystemTempPath, &stat_buf) == 0;
+
+        if (path_exists) {
+          if (S_ISDIR(stat_buf.st_mode)) {
+            if (0 == access(SystemTempPath, R_OK | W_OK)) {
+              use_default_tmp_path = false;
+            } else {
+              warning("Cannot access the specified SystemTempPath");
+            }
+          } else {
+            warning("SystemTempPath must be a directory");
+          }
+        } else {
+          warning("Cannot find the specified SystemTempPath");
+        }
+      } else {
+        warning("Invalid SystemTempPath length");
+      }
+
+      if (use_default_tmp_path) {
+        warning("Ignoring SystemTempPath and using the default temp path");
+      }
+    }
+
+    cached_temp_path = use_default_tmp_path ? default_tmp_path : SystemTempPath;
+  }
+  return cached_temp_path;
+}
 
 // check if addr is inside libjvm.so
 bool os::address_is_in_vm(address addr) {

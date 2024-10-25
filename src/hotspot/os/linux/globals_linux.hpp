@@ -107,6 +107,10 @@
   develop(bool, DelayThreadStartALot, false,                            \
           "Artificially delay thread starts randomly for testing.")     \
                                                                         \
+  diagnostic(ccstr, SystemTempPath, NULL,                               \
+          "An alternative path to use for the system's temporary "      \
+          "directory instead of hardcoded paths like /tmp ")            \
+                                                                        \
 
 
 // end of RUNTIME_OS_FLAGS
