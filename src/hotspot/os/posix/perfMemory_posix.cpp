@@ -127,7 +127,11 @@ static void save_memory_to_file(char* addr, size_t size) {
 // return the user specific temporary directory name.
 // the caller is expected to free the allocated memory.
 //
+#if defined(LINUX)
+#define TMP_BUFFER_LEN (PATH_MAX / 2)
+#else
 #define TMP_BUFFER_LEN (4+22)
+#endif
 static char* get_user_tmp_dir(const char* user, int vmid, int nspid) {
   char* tmpdir = (char *)os::get_temp_directory();
 #if defined(LINUX)
@@ -135,7 +139,7 @@ static char* get_user_tmp_dir(const char* user, int vmid, int nspid) {
   // /proc/{vmid}/root/tmp/{PERFDATA_NAME_user}
   // otherwise /tmp/{PERFDATA_NAME_user}
   char buffer[TMP_BUFFER_LEN];
-  assert(strlen(tmpdir) == 4, "No longer using /tmp - update buffer size");
+  assert((strlen(tmpdir) + 22) < TMP_BUFFER_LEN, "Insufficient buffer size for temp dir");
 
   if (nspid != -1) {
     jio_snprintf(buffer, TMP_BUFFER_LEN, "/proc/%d/root%s", vmid, tmpdir);
