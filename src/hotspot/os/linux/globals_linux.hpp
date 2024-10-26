@@ -107,9 +107,9 @@
   develop(bool, DelayThreadStartALot, false,                            \
           "Artificially delay thread starts randomly for testing.")     \
                                                                         \
-  diagnostic(ccstr, SystemTempPath, NULL,                               \
+  product(ccstr, SystemTempPath, NULL, DIAGNOSTIC,                      \
           "An alternative path to use for the system's temporary "      \
-          "directory instead of hardcoded paths like /tmp ")            \
+          "directory instead of hardcoded paths like /tmp")             \
                                                                         \
 
 
