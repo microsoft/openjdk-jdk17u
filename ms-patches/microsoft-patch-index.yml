@@ -23,6 +23,7 @@ active-patches:
   - ms-patches/gettemppath2
   - ms-patches/remove_undocumentedAPI
   - ms-patches/8345296-aarch64-prctl
+  - ms-patches/large-pages
 
 
 ## Upstreamed Patches
