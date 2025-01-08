@@ -36,12 +36,12 @@
                          range,                                           \
                          constraint)                                      \
                                                                           \
+product(bool, UseOSErrorReporting, false,                                 \
+        "Let VM fatal error propagate to the OS (ie. WER on Windows)")    \
+                                                                          \
 product(bool, EnableAllLargePageSizesForWindows, false,                   \
         "Enable support for multiple large page sizes on "                \
-        "Windows Server")                                                 \
-                                                                          \
-product(bool, UseOSErrorReporting, false,                                 \
-        "Let VM fatal error propagate to the OS (ie. WER on Windows)")
+        "Windows Server")
 
 // end of RUNTIME_OS_FLAGS
 
