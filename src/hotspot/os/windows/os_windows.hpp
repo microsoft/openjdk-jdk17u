@@ -58,11 +58,12 @@ class win32 {
   static void print_uptime_info(outputStream* st);
 
  public:
+  static bool   request_lock_memory_privilege();
+  static size_t large_page_init_decide_size();
   // Windows-specific interface:
   static void   initialize_system_info();
   static void   setmode_streams();
-  static bool   request_lock_memory_privilege();
-  static size_t large_page_init_decide_size();
+
   // Processor info as provided by NT
   static int processor_type()  { return _processor_type;  }
   static int processor_level() {
