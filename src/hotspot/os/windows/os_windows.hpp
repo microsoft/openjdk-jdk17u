@@ -63,6 +63,7 @@ class win32 {
   // Windows-specific interface:
   static void   initialize_system_info();
   static void   setmode_streams();
+
   // Processor info as provided by NT
   static int processor_type()  { return _processor_type;  }
   static int processor_level() {
