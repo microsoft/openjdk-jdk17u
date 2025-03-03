@@ -876,6 +876,7 @@ ifeq ($(call isTargetOs, windows), true)
     BUILD_HOTSPOT_JTREG_EXCLUDE += exesigtest.c libterminatedThread.c libTestJNI.c libnativeStack.c
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libatExit := jvm.lib
 else
+    BUILD_HOTSPOT_JTREG_EXCLUDE += exeGetProcessorInfo.c
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libbootclssearch_agent += -lpthread
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libsystemclssearch_agent += -lpthread
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libgetsysprop001 += -lpthread
@@ -1511,8 +1512,6 @@ else
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libterminatedThread += -lpthread
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libatExit += -ljvm
     BUILD_HOTSPOT_JTREG_LIBRARIES_LIBS_libnativeStack += -lpthread
-
-    BUILD_HOTSPOT_JTREG_EXCLUDE += exeGetProcessorInfo.c
 endif
 
 # This evaluation is expensive and should only be done if this target was
