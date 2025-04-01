@@ -32,6 +32,7 @@
 #include "classfile/stackMapTableFormat.hpp"
 #include "classfile/symbolTable.hpp"
 #include "classfile/systemDictionary.hpp"
+#include "classfile/systemDictionaryShared.hpp"
 #include "classfile/verifier.hpp"
 #include "classfile/vmClasses.hpp"
 #include "classfile/vmSymbols.hpp"
@@ -211,6 +212,12 @@ bool Verifier::verify(InstanceKlass* klass, bool should_verify_class, TRAPS) {
          exception_name == vmSymbols::java_lang_ClassFormatError())) {
       log_info(verification)("Fail over class verification to old verifier for: %s", klass->external_name());
       log_info(class, init)("Fail over class verification to old verifier for: %s", klass->external_name());
+      // Exclude any classes that fail over during dynamic dumping
+      if (CDS_ONLY(DynamicDumpSharedSpaces) NOT_CDS(false)) {
+        ResourceMark rm;
+        log_warning(cds)("Skipping %s: Failed over class verification while dynamic dumping", klass->name()->as_C_string());
+        SystemDictionaryShared::set_excluded(klass);
+      }
       message_buffer = NEW_RESOURCE_ARRAY(char, message_buffer_len);
       exception_message = message_buffer;
       exception_name = inference_verify(
@@ -2250,11 +2257,12 @@ void ClassVerifier::verify_switch(
           "low must be less than or equal to high in tableswitch");
       return;
     }
-    keys = high - low + 1;
-    if (keys < 0) {
+    int64_t keys64 = ((int64_t)high - low) + 1;
+    if (keys64 > 65535) {  // Max code length
       verify_error(ErrorContext::bad_code(bci), "too many keys in tableswitch");
       return;
     }
+    keys = (int)keys64;
     delta = 1;
   } else {
     keys = (int)Bytes::get_Java_u4(aligned_bcp + jintSize);
