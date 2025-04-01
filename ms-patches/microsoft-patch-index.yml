@@ -26,7 +26,6 @@ active-patches:
   - ms-patches/large-pages
   - ms-patches/cleanup-unknown-unwind-opcodes
 
-
 ## Upstreamed Patches
 # Patches that we are no longer applying to our releases, as they
 # have been upstreamed and are part of the official OpenJDK sources.
