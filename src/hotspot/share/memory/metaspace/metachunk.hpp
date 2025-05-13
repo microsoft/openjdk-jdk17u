@@ -347,7 +347,7 @@ public:
     return base() <= p && p < top();
   }
 
-  // Returns true if given pointer points into the commmitted payload area of this chunk.
+  // Returns true if given pointer points into the committed payload area of this chunk.
   bool is_valid_committed_pointer(const MetaWord* p) const {
     return base() <= p && p < committed_top();
   }
