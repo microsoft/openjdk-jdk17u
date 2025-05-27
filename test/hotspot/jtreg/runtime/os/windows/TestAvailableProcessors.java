@@ -120,7 +120,7 @@ public class TestAvailableProcessors {
     private static OutputAnalyzer getAvailableProcessorsOutput(boolean productFlagEnabled) throws IOException {
         String productFlag = productFlagEnabled ? "-XX:+UseAllWindowsProcessorGroups" : "-XX:-UseAllWindowsProcessorGroups";
 
-        ProcessBuilder processBuilder = ProcessTools.createJavaProcessBuilder(
+        ProcessBuilder processBuilder = ProcessTools.createLimitedTestJavaProcessBuilder(
             new String[] {productFlag, "GetAvailableProcessors"}
         );
 
