@@ -25,10 +25,17 @@
 #ifndef SHARE_GC_G1_G1HEAPSIZINGPOLICY_HPP
 #define SHARE_GC_G1_G1HEAPSIZINGPOLICY_HPP
 
+#include "gc/g1/g1_globals.hpp"
+#include "gc/shared/gc_globals.hpp"
 #include "memory/allocation.hpp"
+#include "runtime/globals.hpp"
+#include "utilities/debug.hpp"
+#include "utilities/globalDefinitions.hpp"
 
 class G1Analytics;
 class G1CollectedHeap;
+class HeapRegion;
+template <class E> class GrowableArray;
 
 class G1HeapSizingPolicy: public CHeapObj<mtGC> {
   // MinOverThresholdForGrowth must be less than the number of recorded
@@ -45,13 +52,19 @@ class G1HeapSizingPolicy: public CHeapObj<mtGC> {
   double _ratio_over_threshold_sum;
   uint _pauses_since_start;
 
+  // Static member for time-based heap sizing
+  static jlong _uncommit_delay_ms;
+
   // Scale "full" gc pause time threshold with heap size as we want to resize more
   // eagerly at small heap sizes.
   double scale_with_heap(double pause_time_threshold);
 
+  // Methods for time-based heap sizing
+  void get_uncommit_candidates(GrowableArray<HeapRegion*>* candidates);
+  bool should_uncommit_region(HeapRegion* hr) const;
+
   G1HeapSizingPolicy(const G1CollectedHeap* g1h, const G1Analytics* analytics);
 public:
-
   // If an expansion would be appropriate, because recent GC overhead had
   // exceeded the desired limit, return an amount to expand by.
   size_t young_collection_expansion_amount();
@@ -61,6 +74,11 @@ public:
   size_t full_collection_resize_amount(bool& expand);
   // Clear ratio tracking data used by expansion_amount().
   void clear_ratio_check_data();
+
+  // Time-based heap sizing methods
+  static void initialize();  // Declaration only
+  static jlong uncommit_delay() { return _uncommit_delay_ms; }
+  size_t evaluate_heap_resize(bool& expand);
 
   static G1HeapSizingPolicy* create(const G1CollectedHeap* g1h, const G1Analytics* analytics);
 };
