@@ -55,11 +55,11 @@ inline HeapWord* G1Allocator::attempt_allocation(size_t min_word_size,
   uint node_index = current_node_index();
 
   HeapWord* result = mutator_alloc_region(node_index)->attempt_retained_allocation(min_word_size, desired_word_size, actual_word_size);
-  if (result != NULL) {
-    return result;
+  if (result == NULL) {
+    result = mutator_alloc_region(node_index)->attempt_allocation(min_word_size, desired_word_size, actual_word_size);
   }
 
-  return mutator_alloc_region(node_index)->attempt_allocation(min_word_size, desired_word_size, actual_word_size);
+  return result;
 }
 
 inline HeapWord* G1Allocator::attempt_allocation_using_new_region(size_t word_size) {
