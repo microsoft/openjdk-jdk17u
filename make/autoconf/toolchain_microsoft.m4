@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+# Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
 # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
 #
 # This code is free software; you can redistribute it and/or modify it
@@ -103,7 +103,8 @@ AC_DEFUN([TOOLCHAIN_CHECK_POSSIBLE_VISUAL_STUDIO_ROOT],
             vc/auxiliary/build/vcvarsx86_amd64.bat vc/auxiliary/build/vcvars64.bat"
       elif test "x$TARGET_CPU" = xaarch64; then
         # for host x86-64, target aarch64
-        VCVARSFILES="vc/auxiliary/build/vcvarsamd64_arm64.bat \
+        VCVARSFILES="vc/auxiliary/build/cvarsarm64.bat \
+            vc/auxiliary/build/vcvarsamd64_arm64.bat \
             vc/auxiliary/build/vcvarsx86_arm64.bat"
       fi
 
