@@ -49,12 +49,6 @@ if [ "x$OUT" = x ]; then
     elif [ `uname -m` = riscv64 ]; then
       OUT=riscv64-unknown-linux-gnu
     fi
-  # Test and fix cygwin machine arch .x86_64
-  elif [[ `uname -s` = CYGWIN* ]]; then
-    if [ `uname -m` = ".x86_64" ]; then
-      OUT=x86_64-unknown-cygwin
-    fi
-  fi
 
   if [ "x$OUT" = x ]; then
     # Run autoconf-config.guess again to get the error message.
