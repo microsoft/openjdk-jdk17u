@@ -24,6 +24,7 @@ active-patches:
   - ms-patches/remove_undocumentedAPI
   - ms-patches/large-pages
   - ms-patches/cleanup-unknown-unwind-opcodes
+  - ms-patches/8357445-time-based-uncommit
 
 
 ## Upstreamed Patches
