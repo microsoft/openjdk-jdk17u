@@ -234,6 +234,7 @@ class PlatformMonitor : public PlatformMutex {
   int wait(jlong millis);
   void notify();
   void notify_all();
+  static void context_set_pc(CONTEXT* uc, address pc);
 };
 
 #endif // OS_WINDOWS_OS_WINDOWS_HPP
