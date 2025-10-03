@@ -52,6 +52,7 @@ JfrThreadLocal::JfrThreadLocal() :
   _thread(),
   _data_lost(0),
   _stack_trace_id(max_julong),
+  _last_allocated_bytes(0),
   _user_time(0),
   _cpu_time(0),
   _wallclock_time(os::javaTimeNanos()),
