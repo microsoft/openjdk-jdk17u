@@ -25,6 +25,8 @@ active-patches:
   - ms-patches/large-pages
   - ms-patches/cleanup-unknown-unwind-opcodes
   - ms-patches/8357445-time-based-uncommit
+  - ms-patches/8307488-ObjectAllocationSample-fix
+  - ms-patches/8347129-cpuset-cgroups
 
 
 ## Upstreamed Patches
@@ -45,3 +47,4 @@ active-patches:
   # - ZZ_archive/ms-patches/abandoned-feature-branch-name-1
   # ...
   # - ZZ_archive/ms-patches/abandoned-feature-branch-name-N
+
