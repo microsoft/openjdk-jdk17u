@@ -27,6 +27,7 @@ active-patches:
   - ms-patches/8357445-time-based-uncommit
   - ms-patches/8307488-ObjectAllocationSample-fix
   - ms-patches/8347129-cpuset-cgroups
+  - ms-patches/win-aarch64-fixes
 
 
 ## Upstreamed Patches
