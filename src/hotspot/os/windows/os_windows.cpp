@@ -6275,7 +6275,7 @@ to Windows x64 where there is commentary about Windows x64 behavior.
  *     while (...) {...  fr = os::get_sender_for_C_frame(&fr); }
  * loop in vmError.cpp. We need to roll our own loop.
  */
-bool os::win32::platform_print_native_stack(outputStream* st, const void* context,
+bool os::platform_print_native_stack(outputStream* st, const void* context,
                                             char *buf, int buf_size, address& lastpc)
 {
   CONTEXT ctx;
