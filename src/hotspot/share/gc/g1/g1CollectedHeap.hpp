@@ -85,6 +85,7 @@ class G1ServiceThread;
 class G1ConcurrentMark;
 class G1ConcurrentMarkThread;
 class G1ConcurrentRefine;
+class G1HeapEvaluationTask;
 class GenerationCounters;
 class STWGCTimer;
 class G1NewTracer;
@@ -136,11 +137,13 @@ class G1CollectedHeap : public CollectedHeap {
   friend class VM_G1CollectForAllocation;
   friend class VM_G1CollectFull;
   friend class VM_G1TryInitiateConcMark;
+  friend class VM_G1ShrinkHeap;
   friend class VMStructs;
   friend class MutatorAllocRegion;
   friend class G1FullCollector;
   friend class G1GCAllocRegion;
   friend class G1HeapVerifier;
+  friend class G1HeapEvaluationTask;
 
   // Closures used in implementation.
   friend class G1ParScanThreadState;
@@ -158,6 +161,7 @@ class G1CollectedHeap : public CollectedHeap {
 private:
   G1ServiceThread* _service_thread;
   G1ServiceTask* _periodic_gc_task;
+  G1HeapEvaluationTask* _heap_evaluation_task;
 
   WorkGang* _workers;
   G1CardTable* _card_table;
@@ -754,6 +758,9 @@ private:
   void shrink(size_t shrink_bytes);
   void shrink_helper(size_t expand_bytes);
 
+  // Request to shrink the heap. Returns true if shrinking was attempted.
+  bool request_heap_shrink(size_t shrink_bytes);
+
   #if TASKQUEUE_STATS
   static void print_taskqueue_stats_hdr(outputStream* const st);
   void print_taskqueue_stats() const;
@@ -1032,6 +1039,8 @@ public:
 
   // The current policy object for the collector.
   G1Policy* policy() const { return _policy; }
+  // The heap sizing policy.
+  G1HeapSizingPolicy* heap_sizing_policy() const { return _heap_sizing_policy; }
   // The remembered set.
   G1RemSet* rem_set() const { return _rem_set; }
 
