@@ -27,7 +27,7 @@
 #include "gc/shared/tlab_globals.hpp"
 #include "jfr/jfrEvents.hpp"
 #include "jfr/support/jfrObjectAllocationSample.hpp"
-#include "runtime/javaThread.hpp"
+#include "runtime/thread.hpp"
 #include "utilities/globalDefinitions.hpp"
 
 inline bool send_allocation_sample(const Klass* klass, int64_t allocated_bytes, JfrThreadLocal* tl) {
