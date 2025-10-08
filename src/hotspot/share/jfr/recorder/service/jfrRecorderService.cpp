@@ -122,30 +122,6 @@ const Thread* JfrRotationLock::_owner_thread = NULL;
 const int JfrRotationLock::retry_wait_millis = 10;
 volatile int JfrRotationLock::_lock = 0;
 
-// Reset thread local state used for object allocation sampling.
-class ClearObjectAllocationSampling : public ThreadClosure {
- public:
-  void do_thread(Thread* t) {
-    assert(t != nullptr, "invariant");
-    t->jfr_thread_local()->clear_last_allocated_bytes();
-  }
-};
-
-template <typename Iterator>
-static inline void iterate(Iterator& it, ClearObjectAllocationSampling& coas) {
-  while (it.has_next()) {
-    coas.do_thread(it.next());
-  }
-}
-
-static void clear_object_allocation_sampling() {
-  ClearObjectAllocationSampling coas;
-  JfrJavaThreadIterator jit;
-  iterate(jit, coas);
-  JfrNonJavaThreadIterator njit;
-  iterate(njit, coas);
-}
-
 template <typename Instance, size_t(Instance::*func)()>
 class Content {
  private:
@@ -462,7 +438,6 @@ void JfrRecorderService::clear() {
 }
 
 void JfrRecorderService::pre_safepoint_clear() {
-  clear_object_allocation_sampling();
   _storage.clear();
   JfrStackTraceRepository::clear();
 }
@@ -477,6 +452,7 @@ void JfrRecorderService::safepoint_clear() {
   assert(SafepointSynchronize::is_at_safepoint(), "invariant");
   _checkpoint_manager.begin_epoch_shift();
   _storage.clear();
+  _checkpoint_manager.notify_threads(true);
   _chunkwriter.set_time_stamp();
   JfrStackTraceRepository::clear();
   _checkpoint_manager.end_epoch_shift();
