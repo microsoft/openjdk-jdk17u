@@ -56,7 +56,7 @@ public class TestObjectAllocationSampleEventInitialWeight {
     }
 
     private static void test() throws Exception {
-        long currentThreadId = Thread.currentThread().threadId();
+        long currentThreadId = Thread.currentThread().getId();
         allocate(OBJECTS_TO_ALLOCATE_BEFORE_RECORDING);
         try (Recording r = new Recording()) {
             r.enable(EVENT_NAME);
