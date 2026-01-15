@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -248,6 +248,8 @@ class Compile : public Phase {
   const int             _compile_id;
   const bool            _subsume_loads;         // Load can be matched as part of a larger op.
   const bool            _do_escape_analysis;    // Do escape analysis.
+  const bool            _do_iterative_escape_analysis;    // Do iterative escape analysis.
+  const bool 		 _do_reduce_allocation_merges;  // Do try to reduce allocation merges.
   const bool            _install_code;          // Install the code that was compiled
   const bool            _eliminate_boxing;      // Do boxing elimination.
   const bool            _do_locks_coarsening;   // Do locks coarsening
@@ -507,6 +509,8 @@ class Compile : public Phase {
   bool              subsume_loads() const       { return _subsume_loads; }
   /** Do escape analysis. */
   bool              do_escape_analysis() const  { return _do_escape_analysis; }
+  bool              do_iterative_escape_analysis() const  { return _do_iterative_escape_analysis; }
+  bool              do_reduce_allocation_merges() const  { return _do_reduce_allocation_merges; }
   /** Do boxing elimination. */
   bool              eliminate_boxing() const    { return _eliminate_boxing; }
   /** Do aggressive boxing elimination. */
@@ -1035,7 +1039,9 @@ class Compile : public Phase {
   // replacement, entry_bci indicates the bytecode for which to compile a
   // continuation.
   Compile(ciEnv* ci_env, ciMethod* target,
-          int entry_bci, bool subsume_loads, bool do_escape_analysis,
+          int entry_bci, bool subsume_loads,
+          bool do_escape_analysis, bool do_iterative_escape_analysis,
+          bool do_reduce_allocation_merges,
           bool eliminate_boxing, bool do_locks_coarsening,
           bool install_code, DirectiveSet* directive);
 
