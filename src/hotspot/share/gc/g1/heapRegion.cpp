@@ -132,6 +132,9 @@ void HeapRegion::hr_clear(bool clear_space) {
   if (clear_space) clear(SpaceDecorator::Mangle);
 
   _gc_efficiency = -1.0;
+  
+  // Record activity for time-based heap sizing
+  record_activity();
 }
 
 void HeapRegion::clear_cardtable() {
@@ -247,7 +250,8 @@ HeapRegion::HeapRegion(uint hrm_index,
   _prev_marked_bytes(0), _next_marked_bytes(0),
   _young_index_in_cset(-1),
   _surv_rate_group(NULL), _age_index(G1SurvRateGroup::InvalidAgeIndex), _gc_efficiency(-1.0),
-  _node_index(G1NUMA::UnknownNodeIndex)
+  _node_index(G1NUMA::UnknownNodeIndex),
+  _last_access_timestamp(os::javaTimeMillis())
 {
   assert(Universe::on_page_boundary(mr.start()) && Universe::on_page_boundary(mr.end()),
          "invalid space boundaries");
