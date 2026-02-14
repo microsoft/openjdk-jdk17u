@@ -181,6 +181,7 @@ public:
     _thread_ptr_offset = offset;
   }
   static inline int get_thread_ptr_offset() { return _thread_ptr_offset; }
+  static void context_set_pc(CONTEXT* uc, address pc);
 };
 
 /*
