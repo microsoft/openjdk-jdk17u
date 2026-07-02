@@ -37,7 +37,6 @@ active-patches:
   - ms-patches/multiple-logins
   - ms-patches/processor-api
   - ms-patches/reserved-stack-area
-  - ms-patches/stack-overflow-javac
 
 
 ## Upstreamed Patches
