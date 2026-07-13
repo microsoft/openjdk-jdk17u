@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,6 @@ import java.security.Permission;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import jdk.test.lib.Platform;
 import jdk.test.lib.Platform;
 
 import static java.lang.System.err;
@@ -418,24 +417,32 @@ public class GetXSpace {
         if (l.size() == 0)
             throw new RuntimeException("no partitions?");
 
-        for (int i = 0; i < sma.length; i++) {
-            System.setSecurityManager(sma[i]);
-            SecurityManager sm = System.getSecurityManager();
-            if (sma[i] != null && sm == null)
-                throw new RuntimeException("Test configuration error "
-                                           + " - can't set security manager");
-
-            out.format("%nSecurityManager = %s%n" ,
-                       (sm == null ? "null" : sm.getClass().getName()));
-            for (var p : l) {
+        for (var p : l) {
+            try {
                 Space s = new Space(p);
-                if (sm instanceof Deny) {
-                    tryCatch(s);
-                } else {
-                    compare(s);
-                    compareZeroNonExist();
-                    compareZeroExist();
+                for (int i = 0; i < sma.length; i++) {
+                    System.setSecurityManager(sma[i]);
+                    SecurityManager sm = System.getSecurityManager();
+                    if (sma[i] != null && sm == null)
+                        throw new RuntimeException("Test configuration error "
+                                                + " - can't set security manager");
+
+                    out.format("%nSecurityManager = %s%n" ,
+                           (sm == null ? "null" : sm.getClass().getName()));
+                    if (sm instanceof Deny) {
+                        tryCatch(s);
+                    } else {
+                        compare(s);
+                        compareZeroNonExist();
+                        compareZeroExist();
+                    }
                 }
+            } catch (RuntimeException x) {
+                if (Platform.isWindows() && !new File(p).exists()) {
+                    System.err.format("Skipping unavailable root %s: %s%n", p, x.getMessage());
+                    continue;
+                }
+                throw x;
             }
         }
 
