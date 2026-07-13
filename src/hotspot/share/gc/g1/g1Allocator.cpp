@@ -33,6 +33,7 @@
 #include "gc/g1/heapRegion.inline.hpp"
 #include "gc/g1/heapRegionSet.inline.hpp"
 #include "gc/g1/heapRegionType.hpp"
+#include "runtime/safepoint.hpp"
 #include "gc/shared/tlab_globals.hpp"
 #include "utilities/align.hpp"
 
@@ -203,7 +204,8 @@ size_t G1Allocator::unsafe_max_tlab_alloc() {
 }
 
 size_t G1Allocator::used_in_alloc_regions() {
-  assert(Heap_lock->owner() != NULL, "Should be owned on this thread's behalf.");
+  assert(Heap_lock->owner() != NULL || SafepointSynchronize::is_at_safepoint(),
+         "Should be owned on this thread's behalf or at safepoint.");
   size_t used = 0;
   for (uint i = 0; i < _num_alloc_regions; i++) {
     used += mutator_alloc_region(i)->used_in_alloc_regions();
@@ -251,11 +253,16 @@ HeapWord* G1Allocator::survivor_attempt_allocation(size_t min_word_size,
                                                                               actual_word_size);
   if (result == NULL && !survivor_is_full()) {
     MutexLocker x(FreeList_lock, Mutex::_no_safepoint_check_flag);
-    result = survivor_gc_alloc_region(node_index)->attempt_allocation_locked(min_word_size,
-                                                                             desired_word_size,
-                                                                             actual_word_size);
-    if (result == NULL) {
-      set_survivor_full();
+    // Multiple threads may have queued at the FreeList_lock above after checking whether there
+    // is still space available. Be sure to check again whether there is still space in the
+    // region so that we don't needlessly try to get a new region.
+    if (!survivor_is_full()) {
+      result = survivor_gc_alloc_region(node_index)->attempt_allocation_locked(min_word_size,
+                                                                               desired_word_size,
+                                                                               actual_word_size);
+      if (result == NULL) {
+        set_survivor_full();
+      }
     }
   }
   if (result != NULL) {
@@ -275,11 +282,16 @@ HeapWord* G1Allocator::old_attempt_allocation(size_t min_word_size,
                                                                actual_word_size);
   if (result == NULL && !old_is_full()) {
     MutexLocker x(FreeList_lock, Mutex::_no_safepoint_check_flag);
-    result = old_gc_alloc_region()->attempt_allocation_locked(min_word_size,
-                                                              desired_word_size,
-                                                              actual_word_size);
-    if (result == NULL) {
-      set_old_full();
+    // Multiple threads may have queued at the FreeList_lock above after checking whether there
+    // is still space available. Be sure to check again whether there is still space in the
+    // region so that we don't needlessly try to get a new region.
+    if (!old_is_full()) {
+      result = old_gc_alloc_region()->attempt_allocation_locked(min_word_size,
+                                                                desired_word_size,
+                                                                actual_word_size);
+      if (result == NULL) {
+        set_old_full();
+      }
     }
   }
   return result;
