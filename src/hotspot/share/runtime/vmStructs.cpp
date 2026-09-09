@@ -569,6 +569,18 @@ typedef HashtableEntry<InstanceKlass*, mtClass>  KlassHashtableEntry;
      static_field(StubRoutines,                _electronicCodeBook_decryptAESCrypt,           address)                               \
      static_field(StubRoutines,                _counterMode_AESCrypt,                         address)                               \
      static_field(StubRoutines,                _ghash_processBlocks,                          address)                               \
+     static_field(StubRoutines,                _kyberNtt,                                     address)                               \
+     static_field(StubRoutines,                _kyberInverseNtt,                              address)                               \
+     static_field(StubRoutines,                _kyberNttMult,                                 address)                               \
+     static_field(StubRoutines,                _kyberAddPoly_2,                               address)                               \
+     static_field(StubRoutines,                _kyberAddPoly_3,                               address)                               \
+     static_field(StubRoutines,                _kyber12To16,                                  address)                               \
+     static_field(StubRoutines,                _kyberBarrettReduce,                           address)                               \
+     static_field(StubRoutines,                _dilithiumAlmostNtt,                           address)                               \
+     static_field(StubRoutines,                _dilithiumAlmostInverseNtt,                    address)                               \
+     static_field(StubRoutines,                _dilithiumNttMult,                             address)                               \
+     static_field(StubRoutines,                _dilithiumMontMulByConstant,                   address)                               \
+     static_field(StubRoutines,                _dilithiumDecomposePoly,                       address)                               \
      static_field(StubRoutines,                _base64_encodeBlock,                           address)                               \
      static_field(StubRoutines,                _base64_decodeBlock,                           address)                               \
      static_field(StubRoutines,                _updateBytesCRC32,                             address)                               \
@@ -576,6 +588,7 @@ typedef HashtableEntry<InstanceKlass*, mtClass>  KlassHashtableEntry;
      static_field(StubRoutines,                _crc32c_table_addr,                            address)                               \
      static_field(StubRoutines,                _updateBytesCRC32C,                            address)                               \
      static_field(StubRoutines,                _updateBytesAdler32,                           address)                               \
+     static_field(StubRoutines,                _double_keccak,                                address)                               \
      static_field(StubRoutines,                _multiplyToLen,                                address)                               \
      static_field(StubRoutines,                _squareToLen,                                  address)                               \
      static_field(StubRoutines,                _bigIntegerRightShiftWorker,                   address)                               \
@@ -687,7 +700,7 @@ typedef HashtableEntry<InstanceKlass*, mtClass>  KlassHashtableEntry;
   nonstatic_field(nmethod,                     _verified_entry_point,                         address)                               \
   nonstatic_field(nmethod,                     _osr_entry_point,                              address)                               \
   volatile_nonstatic_field(nmethod,            _lock_count,                                   jint)                                  \
-  volatile_nonstatic_field(nmethod,            _stack_traversal_mark,                         long)                                  \
+  volatile_nonstatic_field(nmethod,            _stack_traversal_mark,                         int64_t)                               \
   nonstatic_field(nmethod,                     _compile_id,                                   int)                                   \
   nonstatic_field(nmethod,                     _comp_level,                                   int)                                   \
                                                                                                                                      \
@@ -1224,6 +1237,7 @@ typedef HashtableEntry<InstanceKlass*, mtClass>  KlassHashtableEntry;
   declare_integer_type(ssize_t)                                           \
   declare_integer_type(intx)                                              \
   declare_integer_type(intptr_t)                                          \
+  declare_integer_type(int64_t)                                           \
   declare_unsigned_integer_type(uintx)                                    \
   declare_unsigned_integer_type(uintptr_t)                                \
   declare_unsigned_integer_type(uint8_t)                                  \

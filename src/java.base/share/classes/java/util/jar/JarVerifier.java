@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,6 +44,9 @@ import sun.security.util.Debug;
  */
 class JarVerifier {
 
+    public static final String MULTIPLE_MANIFEST_WARNING =
+            "WARNING: Multiple MANIFEST.MF found. Treat JAR file as unsigned.";
+
     /* Are we debugging ? */
     static final Debug debug = Debug.getInstance("jar");
 
@@ -63,7 +66,7 @@ class JarVerifier {
     private ArrayList<SignatureFileVerifier> pendingBlocks;
 
     /* cache of CodeSigner objects */
-    private ArrayList<CodeSigner[]> signerCache;
+    private List<CodeSigner[]> signerCache;
 
     /* Are we parsing a block? */
     private boolean parsingBlockOrSF = false;
@@ -292,7 +295,7 @@ class JarVerifier {
                 String key = uname.substring(0, uname.lastIndexOf('.'));
 
                 if (signerCache == null)
-                    signerCache = new ArrayList<>();
+                    signerCache = new LinkedList<>();
 
                 if (manDig == null) {
                     synchronized(manifestRawBytes) {

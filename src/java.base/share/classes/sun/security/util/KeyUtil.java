@@ -25,8 +25,12 @@
 
 package sun.security.util;
 
+import java.security.AccessController;
 import java.security.AlgorithmParameters;
 import java.security.Key;
+import java.security.PrivilegedAction;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.security.InvalidKeyException;
 import java.security.interfaces.ECKey;
 import java.security.interfaces.EdECKey;
@@ -193,6 +197,28 @@ public final class KeyUtil {
     }
 
     /**
+     * Returns the algorithm name of the given key object. If an EC key is
+     * specified, returns the algorithm name and its named curve.
+     *
+     * @param key the key object, cannot be null
+     * @return the algorithm name of the given key object, or return in the
+     *       form of "EC (named curve)" if the given key object is an EC key
+     */
+    public static final String fullDisplayAlgName(Key key) {
+        String result = key.getAlgorithm();
+        if (key instanceof PrivateKey || key instanceof PublicKey) {
+            AlgorithmParameterSpec paramSpec = getParams(key);
+            if (paramSpec instanceof NamedCurve) {
+                NamedCurve nc = (NamedCurve)paramSpec;
+                result += " (" + nc.getNameAndAliases()[0] + ")";
+            } else if (paramSpec instanceof NamedParameterSpec nps) {
+                result = nps.getName();
+            }
+        }
+        return result;
+    }
+
+    /**
      * Returns whether the key is valid or not.
      * <P>
      * Note that this method is only apply to DHPublicKey at present.
@@ -322,19 +348,31 @@ public final class KeyUtil {
             tmp = encoded;
         }
 
+        // At this point tmp.length is 48
         int encodedVersion =
                 ((tmp[0] & 0xFF) << 8) | (tmp[1] & 0xFF);
-        int check1 = 0;
-        int check2 = 0;
-        int check3 = 0;
-        if (clientVersion != encodedVersion) check1 = 1;
-        if (clientVersion > 0x0301) check2 = 1;
-        if (serverVersion != encodedVersion) check3 = 1;
-        if ((check1 & (check2 | check3)) == 1) {
-            return replacer;
-        } else {
-            return tmp;
+
+        // The following code is a time-constant version of
+        // if ((clientVersion != encodedVersion) ||
+        //    ((clientVersion > 0x301) && (serverVersion != encodedVersion))) {
+        //        return replacer;
+        // } else { return tmp; }
+        int check1 = (clientVersion - encodedVersion) |
+                (encodedVersion - clientVersion);
+        int check2 = 0x0301 - clientVersion;
+        int check3 = (serverVersion - encodedVersion) |
+                (encodedVersion - serverVersion);
+
+        check1 = (check1 & (check2 | check3)) >> 24;
+
+        // Now check1 is either 0 or -1
+        check2 = ~check1;
+
+        for (int i = 0; i < 48; i++) {
+            tmp[i] = (byte) ((tmp[i] & check2) | (replacer[i] & check1));
         }
+
+        return tmp;
     }
 
     /**
@@ -409,5 +447,30 @@ public final class KeyUtil {
         return t;
     }
 
+    @SuppressWarnings({"deprecation", "removal"})
+    public static AlgorithmParameterSpec getParams(Key key) {
+        try {
+            var m = key.getClass().getMethod("getParams");
+            if (!m.isAccessible()) {
+                PrivilegedAction<Object> pa = () -> {
+                    m.setAccessible(true);
+                    return null;
+                };
+                AccessController.doPrivileged(pa);
+            }
+            var result = m.invoke(key);
+            if (result instanceof AlgorithmParameterSpec spec) {
+                return spec;
+            }
+        } catch (NoSuchMethodException e) {
+        } catch (ReflectiveOperationException e) {
+        }
+        return null;
+    }
+
+    public static boolean isSupportedKeyAgreementOutputAlgorithm(String alg) {
+        return alg.equalsIgnoreCase("TlsPremasterSecret")
+                || alg.equalsIgnoreCase("Generic");
+    }
 }
 

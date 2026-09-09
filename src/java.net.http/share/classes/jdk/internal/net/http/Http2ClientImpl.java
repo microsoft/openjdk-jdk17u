@@ -28,7 +28,6 @@ package jdk.internal.net.http;
 import java.io.EOFException;
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.Base64;
@@ -42,6 +41,8 @@ import jdk.internal.net.http.common.Logger;
 import jdk.internal.net.http.common.MinimalFuture;
 import jdk.internal.net.http.common.Utils;
 import jdk.internal.net.http.frame.SettingsFrame;
+
+import static jdk.internal.net.http.frame.SettingsFrame.INITIAL_CONNECTION_WINDOW_SIZE;
 import static jdk.internal.net.http.frame.SettingsFrame.INITIAL_WINDOW_SIZE;
 import static jdk.internal.net.http.frame.SettingsFrame.ENABLE_PUSH;
 import static jdk.internal.net.http.frame.SettingsFrame.HEADER_TABLE_SIZE;
@@ -54,10 +55,11 @@ import static jdk.internal.net.http.frame.SettingsFrame.MAX_HEADER_LIST_SIZE;
  */
 class Http2ClientImpl {
 
-    final static Logger debug =
+    static final Logger debug =
             Utils.getDebugLogger("Http2ClientImpl"::toString, Utils.DEBUG);
 
     private final HttpClientImpl client;
+    private volatile boolean stopping;
 
     Http2ClientImpl(HttpClientImpl client) {
         this.client = client;
@@ -100,7 +102,7 @@ class Http2ClientImpl {
             Http2Connection connection = connections.get(key);
             if (connection != null) {
                 try {
-                    if (connection.closed
+                    if (!connection.isOpen()
                             || !connection.reserveStream(true, pushEnabled)) {
                         if (debug.on())
                             debug.log("removing connection from pool since " +
@@ -156,7 +158,7 @@ class Http2ClientImpl {
      */
     boolean offerConnection(Http2Connection c) {
         if (debug.on()) debug.log("offering to the connection pool: %s", c);
-        if (c.closed || c.finalStream()) {
+        if (!c.isOpen() || c.finalStream()) {
             if (debug.on())
                 debug.log("skipping offered closed or closing connection: %s", c);
             return false;
@@ -164,6 +166,16 @@ class Http2ClientImpl {
 
         String key = c.key();
         synchronized(this) {
+            if (stopping) {
+                if (debug.on()) debug.log("stopping - closing connection: %s", c);
+                close(c);
+                return false;
+            }
+            if (!c.isOpen()) {
+                if (debug.on())
+                    debug.log("skipping offered closed or closing connection: %s", c);
+                return false;
+            }
             Http2Connection c1 = connections.putIfAbsent(key, c);
             if (c1 != null) {
                 if (c.serverPushEnabled() && !c1.serverPushEnabled()) {
@@ -206,13 +218,21 @@ class Http2ClientImpl {
         if (debug.on()) debug.log("stopping");
         STOPPED = new EOFException("HTTP/2 client stopped");
         STOPPED.setStackTrace(new StackTraceElement[0]);
-        connections.values().forEach(this::close);
-        connections.clear();
+        synchronized (this) {stopping = true;}
+        do {
+            connections.values().forEach(this::close);
+        } while (!connections.isEmpty());
     }
 
     private void close(Http2Connection h2c) {
+        // close all streams
+        try { h2c.closeAllStreams(); } catch (Throwable t) {}
+        // send GOAWAY
         try { h2c.close(); } catch (Throwable t) {}
+        // attempt graceful shutdown
         try { h2c.shutdown(STOPPED); } catch (Throwable t) {}
+        // double check and close any new streams
+        try { h2c.closeAllStreams(); } catch (Throwable t) {}
     }
 
     HttpClientImpl client() {
@@ -247,9 +267,13 @@ class Http2ClientImpl {
         int defaultValue = Math.min(Integer.MAX_VALUE,
                 Math.max(streamWindow, K*K*32));
 
+        // The min value is the max between the streamWindow and
+        // the initial connection window size
+        int minValue = Math.max(INITIAL_CONNECTION_WINDOW_SIZE, streamWindow);
+
         return getParameter(
                 "jdk.httpclient.connectionWindowSize",
-                streamWindow, Integer.MAX_VALUE, defaultValue);
+                minValue, Integer.MAX_VALUE, defaultValue);
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -89,6 +89,7 @@ public class BasicOptionPaneUI extends OptionPaneUI {
     public static final int MinimumHeight = 90;
 
     private static String newline;
+    private static int recursionCount;
 
     /**
      * {@code JOptionPane} that the receiver is providing the
@@ -373,6 +374,7 @@ public class BasicOptionPaneUI extends OptionPaneUI {
                       "OptionPane.messageAnchor", GridBagConstraints.CENTER);
         cons.insets = new Insets(0,0,3,0);
 
+        recursionCount = 0;
         addMessageComponents(body, cons, getMessage(),
                           getMaxCharactersPerLineCount(), false);
         top.add(realBody, BorderLayout.CENTER);
@@ -457,10 +459,9 @@ public class BasicOptionPaneUI extends OptionPaneUI {
             if (nl >= 0) {
                 // break up newlines
                 if (nl == 0) {
-                    @SuppressWarnings("serial") // anonymous class
                     JPanel breakPanel = new JPanel() {
                         public Dimension getPreferredSize() {
-                            Font       f = getFont();
+                            Font f = getFont();
 
                             if (f != null) {
                                 return new Dimension(1, f.getSize() + 2);
@@ -473,20 +474,33 @@ public class BasicOptionPaneUI extends OptionPaneUI {
                                          true);
                 } else {
                     addMessageComponents(container, cons, s.substring(0, nl),
-                                      maxll, false);
+                                         maxll, false);
+                }
+                // Prevent recursion of more than
+                // 200 successive newlines in a message
+                // and indicate message is truncated via ellipsis
+                if (recursionCount++ > 200) {
+                    recursionCount = 0;
+                    addMessageComponents(container, cons, new String("..."),
+                                         maxll, false);
+                    return;
                 }
                 addMessageComponents(container, cons, s.substring(nl + nll), maxll,
-                                  false);
+                                     false);
 
             } else if (len > maxll) {
                 Container c = Box.createVerticalBox();
                 c.setName("OptionPane.verticalBox");
                 burstStringInto(c, s, maxll);
-                addMessageComponents(container, cons, c, maxll, true );
+                addMessageComponents(container, cons, c, maxll, true);
 
             } else {
-                JLabel label;
-                label = new JLabel( s, JLabel.LEADING );
+                JLabel label = new JLabel();
+                if (Boolean.TRUE.equals(
+                    optionPane.getClientProperty("html.disable"))) {
+                    label.putClientProperty("html.disable", true);
+                }
+                label.setText(s);
                 label.setName("OptionPane.label");
                 configureMessageLabel(label);
                 addMessageComponents(container, cons, label, maxll, true);

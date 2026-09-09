@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1996, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package sun.security.pkcs;
 
-import java.io.OutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.security.cert.CertPathValidatorException;
@@ -43,7 +42,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import sun.security.provider.SHAKE256;
+import sun.security.provider.SHA3.SHAKE256;
 import sun.security.timestamp.TimestampToken;
 import sun.security.util.*;
 import sun.security.x509.AlgorithmId;
@@ -236,7 +235,7 @@ public class SignerInfo implements DerEncoder {
      *
      * @exception IOException on encoding error.
      */
-    public void derEncode(OutputStream out) throws IOException {
+    public void derEncode(DerOutputStream out) throws IOException {
         DerOutputStream seq = new DerOutputStream();
         seq.putInteger(version);
         DerOutputStream issuerAndSerialNumber = new DerOutputStream();
@@ -258,10 +257,7 @@ public class SignerInfo implements DerEncoder {
         if (unauthenticatedAttributes != null)
             unauthenticatedAttributes.encode((byte)0xA1, seq);
 
-        DerOutputStream tmp = new DerOutputStream();
-        tmp.write(DerValue.tag_Sequence, seq);
-
-        out.write(tmp.toByteArray());
+        out.write(DerValue.tag_Sequence, seq);
     }
 
     /*
@@ -360,6 +356,21 @@ public class SignerInfo implements DerEncoder {
             // if there are authenticate attributes, get the message
             // digest and compare it with the digest of data
             if (authenticatedAttributes == null) {
+                // RFC 5652 Section 5.3. "[signedAttrs] MUST be present if the
+                // content type of the EncapsulatedContentInfo value being
+                // signed is not id-data."
+                if (!content.getContentType().equals(ContentInfo.DATA_OID)) {
+                    throw new SignatureException("Missing authenticatedAttributes");
+                } else {
+                    try {
+                        var c = new DerValue(data);
+                        if (c.tag == DerValue.tag_Set) {
+                            throw new SignatureException("Not a .SF file content");
+                        }
+                    } catch (IOException e) {
+                        // Expected or ignored
+                    }
+                }
                 dataSigned = data;
             } else {
 
@@ -656,6 +667,12 @@ public class SignerInfo implements DerEncoder {
         if (tsToken == null) {
             hasTimestamp = false;
             return null;
+        }
+
+        // RFC 3161 Section 2.4.2. id-ct-TSTInfo.
+        if (!tsToken.getContentInfo().getContentType()
+                .equals(ContentInfo.TIMESTAMP_TOKEN_INFO_OID)) {
+            throw new SignatureException("Not using id-ct-TSTInfo");
         }
 
         // Extract the content (an encoded timestamp token info)
