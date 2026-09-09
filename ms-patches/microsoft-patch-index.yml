@@ -37,7 +37,6 @@ active-patches:
   - ms-patches/multiple-logins
   - ms-patches/processor-api
   - ms-patches/reserved-stack-area
-  - ms-patches/dt_socket-fix
 
 
 ## Upstreamed Patches
@@ -50,6 +49,7 @@ active-patches:
   - ZZ_archive/ms-patches/Backport-JDK-8305763-URIParsing
   - ZZ_archive/ms-patches/sst
   - ZZ_archive/ms-patches/8345296-aarch64-prctl
+  - ZZ_archive/ms-patches/dt_socket-fix
 
 
 # Patches that we are no longer applying to our releases as they have
