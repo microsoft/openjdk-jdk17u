@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2023, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -289,6 +289,7 @@ macro(RotateRight)
 macro(RotateRightV)
 macro(SafePoint)
 macro(SafePointScalarObject)
+macro(SafePointScalarMerge)
 #if INCLUDE_SHENANDOAHGC
 #define shmacro(x) macro(x)
 #else
