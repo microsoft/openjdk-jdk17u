@@ -40,7 +40,11 @@ product(bool, UseAllWindowsProcessorGroups, false,                        \
         "Use all processor groups on supported Windows versions")         \
                                                                           \
 product(bool, UseOSErrorReporting, false,                                 \
-        "Let VM fatal error propagate to the OS (ie. WER on Windows)")
+        "Let VM fatal error propagate to the OS (ie. WER on Windows)")    \
+                                                                          \
+product(bool, EnableAllLargePageSizesForWindows, false,                   \
+        "Enable support for multiple large page sizes on "                \
+        "Windows Server")
 
 // end of RUNTIME_OS_FLAGS
 
