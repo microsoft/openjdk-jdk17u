@@ -1,0 +1,8 @@
+title: ObjectAllocationSample Fix
+- work_item: 2503013 
+- jbs_bug: JDK-8307488
+- author: Markus Grönlund
+- owner: macarte
+- details:
+  - Fixes the problem with incorrect weights attribution for the initial ObjectAllocationSample event.
+  - release_note: Fixes the problem with incorrect weights attribution for the initial ObjectAllocationSample event.

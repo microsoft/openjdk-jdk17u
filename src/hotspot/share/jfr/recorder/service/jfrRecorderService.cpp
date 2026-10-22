@@ -41,6 +41,7 @@
 #include "jfr/recorder/storage/jfrStorageControl.hpp"
 #include "jfr/recorder/stringpool/jfrStringPool.hpp"
 #include "jfr/utilities/jfrAllocation.hpp"
+#include "jfr/utilities/jfrThreadIterator.hpp"
 #include "jfr/utilities/jfrTime.hpp"
 #include "jfr/writers/jfrJavaEventWriter.hpp"
 #include "jfr/utilities/jfrTypes.hpp"
@@ -451,6 +452,7 @@ void JfrRecorderService::safepoint_clear() {
   assert(SafepointSynchronize::is_at_safepoint(), "invariant");
   _checkpoint_manager.begin_epoch_shift();
   _storage.clear();
+  _checkpoint_manager.notify_threads(true);
   _chunkwriter.set_time_stamp();
   JfrStackTraceRepository::clear();
   _checkpoint_manager.end_epoch_shift();
