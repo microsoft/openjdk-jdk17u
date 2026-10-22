@@ -188,6 +188,7 @@ class VM_PrintMetadata : public VM_Operation {
 };
 
 class DeadlockCycle;
+class G1CollectedHeap;
 class VM_FindDeadlocks: public VM_Operation {
  private:
   bool              _concurrent_locks;
@@ -290,5 +291,17 @@ class VM_PrintClassHierarchy: public VM_Operation {
   void doit();
 };
 #endif // INCLUDE_SERVICES
+
+class VM_G1ShrinkHeap : public VM_Operation {
+ private:
+  G1CollectedHeap* _g1h;
+  size_t _bytes;
+ public:
+  VM_G1ShrinkHeap(G1CollectedHeap* g1h, size_t bytes)
+    : _g1h(g1h), _bytes(bytes) {}
+  VMOp_Type type() const { return VMOp_G1ShrinkHeap; }
+  const char* name() const { return "G1ShrinkHeap"; }
+  void doit();
+};
 
 #endif // SHARE_RUNTIME_VMOPERATIONS_HPP
