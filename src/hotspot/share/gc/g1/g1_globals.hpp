@@ -51,6 +51,25 @@
           "of the optimal occupancy to start marking.")                     \
           range(1, max_intx)                                                \
                                                                             \
+  product(bool, G1UseTimeBasedHeapSizing, false, EXPERIMENTAL,              \
+          "Enable time-based heap sizing to uncommit memory from inactive " \
+          "regions independent of GC cycles")                               \
+                                                                            \
+  product(uintx, G1TimeBasedEvaluationIntervalMillis, 60 * 1000, MANAGEABLE, \
+          "Interval in milliseconds between periodic heap-size evaluations "\
+          "when G1UseTimeBasedHeapSizing is enabled")                       \
+          range(1000, max_jlong)                                            \
+                                                                            \
+  product(uintx, G1UncommitDelayMillis, 5 * 60 * 1000, MANAGEABLE,          \
+          "A region is considered inactive if it has not been accessed "    \
+          "within this many milliseconds")                                  \
+          range(1000, max_jlong)                                            \
+                                                                            \
+  product(size_t, G1MinRegionsToUncommit, 10, EXPERIMENTAL,                 \
+          "Minimum number of inactive regions required before G1 will "     \
+          "attempt to uncommit memory")                                     \
+          range(1, max_uintx)                                               \
+                                                                            \
   product(uintx, G1ConfidencePercent, 50,                                   \
           "Confidence level for MMU/pause predictions")                     \
           range(0, 100)                                                     \
