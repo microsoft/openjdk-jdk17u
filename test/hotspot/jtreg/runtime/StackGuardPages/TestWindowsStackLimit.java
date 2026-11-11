@@ -23,13 +23,14 @@
 
 /*
  * @test
+ * @bug 8394484
  * @summary Verifies that on Windows, HotSpot's access-violation recovery for
  *          an in-Java stack fault advances TEB.StackLimit to cover the newly
  *          committed stack memory.
  * @requires os.family == "windows" & os.arch == "amd64"
- * @run main/othervm/native -Xcomp -XX:+CriticalJNINatives
+ * @run main/othervm/native --enable-native-access=ALL-UNNAMED -Xss1m
  *      -XX:CompileCommand=compileonly,TestWindowsStackLimit::*
- *      TestWindowsStackLimit
+ *      -Xcomp -XX:+CriticalJNINatives TestWindowsStackLimit
  */
 
 public class TestWindowsStackLimit {
